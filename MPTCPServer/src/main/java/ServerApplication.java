@@ -1,4 +1,5 @@
 import Network.DataTransfer;
+import Network.NetworkConfiguration;
 import Network.NetworkPacket;
 import Network.PacketType;
 
@@ -11,11 +12,11 @@ import java.util.Arrays;
  * Created as part of the class project for Mobile Computing
  */
 public class ServerApplication {
-    public static String filePath = "D:\\Mobile Computing\\MPTCPHandover\\MPTCPServer\\src\\main\\resources\\";
+    public static String filePath = System.getProperty("user.dir");
 
     public static void main(String[] args) {
         try {
-            ServerSocket serverSocket = new ServerSocket(10500);
+            ServerSocket serverSocket = new ServerSocket(Integer.parseInt(NetworkConfiguration.getProperty("port")));
 
             System.out.println("Server Started...");
             Socket socket = serverSocket.accept();
@@ -39,7 +40,7 @@ public class ServerApplication {
                     fileName = new String(packet.getData());
 
 
-                    file = new File(filePath + fileName);
+                    file = new File(filePath + "\\" + fileName);
                     raFile = new RandomAccessFile(file, "r");
 
                     fis = new FileInputStream(file);
@@ -57,7 +58,7 @@ public class ServerApplication {
                 long offset = packet.getId() - 1;
                 raFile.seek(offset);
                 bis.read(fileByteArray, 0, packetSize);
-                System.out.println(String.format("Sending packet sequence: %l", packet.getId()));
+                System.out.println(String.format("Sending packet sequence: %d", packet.getId()));
                 NetworkPacket fileContents = new NetworkPacket(packet.getId(), PacketType.DATA, fileByteArray.length, Arrays.copyOf(fileByteArray, fileByteArray.length));
                 fileTransfer.sendData(fileContents);
             }

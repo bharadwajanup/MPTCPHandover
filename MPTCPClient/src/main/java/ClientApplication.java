@@ -1,4 +1,5 @@
 import Network.DataTransfer;
+import Network.NetworkConfiguration;
 import Network.NetworkPacket;
 import Network.PacketType;
 
@@ -12,14 +13,15 @@ import java.net.Socket;
  * Created as part of the class project for Mobile Computing
  */
 public class ClientApplication {
-    public static String storePath = "/home/rkanchib/Downloads/MC/MPTCPHandover/MPTCPClient/src/main/resources/";
+
+    public static String storePath = System.getProperty("user.dir");
 
     public static void main(String[] args) {
         try {
-            String serverName = "127.0.0.1";
-            int port = 10500;
+            String serverName = NetworkConfiguration.getProperty("host");
+            int port = Integer.parseInt(NetworkConfiguration.getProperty("port"));
             Socket helloWorldSocket = new Socket(serverName, port);
-            String fileName = "proposal.pptx";
+            String fileName = NetworkConfiguration.getProperty("file");
             NetworkPacket fileNamePacket = new NetworkPacket(
                     1,
                     PacketType.INITIALIZER,
