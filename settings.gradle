@@ -1,0 +1,5 @@
+rootProject.name = 'MPTCPHandover'
+include 'MPTCPClient'
+include 'MPTCPServer'
+include 'MPTCPCore'
+
