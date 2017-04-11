@@ -8,7 +8,7 @@ import java.net.Socket;
 import java.util.Arrays;
 
 /**
- * Created by Bharadwaj on 4/6/2017.
+ * Created as part of the class project for Mobile Computing
  */
 public class ServerApplication {
     public static String filePath = "D:\\Mobile Computing\\MPTCPHandover\\MPTCPServer\\src\\main\\resources\\";

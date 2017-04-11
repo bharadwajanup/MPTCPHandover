@@ -9,7 +9,7 @@ import java.io.RandomAccessFile;
 import java.net.Socket;
 
 /**
- * Created by Bharadwaj on 4/6/2017.
+ * Created as part of the class project for Mobile Computing
  */
 public class ClientApplication {
     public static String storePath = "/home/rkanchib/Downloads/MC/MPTCPHandover/MPTCPClient/src/main/resources/";

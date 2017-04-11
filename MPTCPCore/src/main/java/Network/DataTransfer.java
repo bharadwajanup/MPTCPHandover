@@ -6,7 +6,7 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 
 /**
- * Created by Bharadwaj on 4/6/2017.
+ * Created as part of the class project for Mobile Computing
  */
 public class DataTransfer {
 

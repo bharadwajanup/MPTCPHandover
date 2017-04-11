@@ -3,7 +3,7 @@ package Network;
 import java.io.Serializable;
 
 /**
- * Created by Bharadwaj on 4/6/2017.
+ * Created as part of the class project for Mobile Computing
  */
 
 public class NetworkPacket implements Serializable {
