@@ -11,19 +11,39 @@ import java.util.Arrays;
 /**
  * Created as part of the class project for Mobile Computing
  */
-public class ServerApplication {
+public class ServerApplication implements Runnable {
     public static String filePath = System.getProperty("user.dir");
+    Socket sock;
 
-    public static void main(String[] args) {
-        try {
+    public ServerApplication(Socket sock) {
+        this.sock = sock;
+    }
+
+    public static void main(String[] args) throws Exception {
+
             ServerSocket serverSocket = new ServerSocket(Integer.parseInt(NetworkConfiguration.getProperty("port")));
 
             System.out.println("Server Started...");
+        Thread newThread = null;
+        while (true) {
             Socket socket = serverSocket.accept();
 
             System.out.println("Connection Established: " + socket);
+            newThread = new Thread(new ServerApplication(socket));
+            newThread.start();
+            newThread.join();
+        }
 
-            DataTransfer fileTransfer = new DataTransfer(socket);
+
+
+
+
+    }
+
+    @Override
+    public void run() {
+        try {
+            DataTransfer fileTransfer = new DataTransfer(sock);
 
 
             int packetSize = 0;
@@ -68,11 +88,9 @@ public class ServerApplication {
 
             bis.close();
             fileTransfer.close();
-
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException ex) {
+            ex.printStackTrace();
         }
-
 
     }
 }
