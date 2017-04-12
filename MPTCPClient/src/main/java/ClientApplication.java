@@ -39,6 +39,12 @@ public class ClientApplication {
             while (true) {
 
                 NetworkPacket packet = fileTransfer.receiveData();
+                if(packet.getType() == PacketType.ACKNOWLEDGEMENT) {
+                    packet = new NetworkPacket(1, PacketType.ACKNOWLEDGEMENT,0,null);
+                    fileTransfer.sendData(packet);
+                    System.out.println("Sent Initial packet");
+                    continue;
+                }
                 int offset = (int) packet.getId() - 1;
                 int packetSize = offset + 100;
                 arrayFile.seek(offset);
