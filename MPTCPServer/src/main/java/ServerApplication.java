@@ -19,23 +19,41 @@ public class ServerApplication implements Runnable {
         this.sock = sock;
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) throws InterruptedException {
 
-            ServerSocket serverSocket = new ServerSocket(Integer.parseInt(NetworkConfiguration.getProperty("port")));
 
-            System.out.println("Server Started...");
-        Thread newThread = null;
-        while (true) {
-            Socket socket = serverSocket.accept();
-
-            System.out.println("Connection Established: " + socket);
-            newThread = new Thread(new ServerApplication(socket));
-            newThread.start();
-            newThread.join();
+        ServerSocket serverSocket = null;
+        try {
+            serverSocket = new ServerSocket(Integer.parseInt(NetworkConfiguration.getProperty("port")));
+            serverSocket.setReuseAddress(true);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
 
+        System.out.println("Server Started...");
+        Thread newThread = null;
+        while (true) {
+            try {
+                System.out.println("Accepting Connections");
+                Socket socket = serverSocket.accept();
+                System.out.println("Connection Established " + socket);
 
+                System.out.println("Connection Established: " + socket);
+                newThread = new Thread(new ServerApplication(socket));
+                newThread.start();
+
+                if (newThread.isAlive())
+                    System.out.println("Thread is still alive!");
+                else
+                    System.out.println("Thread is dead!");
+
+            } catch (IOException ex) {
+                ex.printStackTrace();
+                newThread.join();
+                break;
+            }
+        }
 
 
     }
@@ -44,7 +62,6 @@ public class ServerApplication implements Runnable {
     public void run() {
         try {
             DataTransfer fileTransfer = new DataTransfer(sock);
-
 
             int packetSize = 0;
             byte[] fileByteArray = null;
@@ -67,6 +84,10 @@ public class ServerApplication implements Runnable {
                     bis = new BufferedInputStream(fis);
                     packetSize = packet.getLength();
                     fileByteArray = new byte[packetSize];
+                    NetworkPacket ackPacket = new NetworkPacket(1, PacketType.ACKNOWLEDGEMENT, 0, null);
+                    System.out.println("Sending ACK for Initiliazer");
+                    fileTransfer.sendData(ackPacket);
+                    continue;
                 }
 
 
@@ -78,7 +99,7 @@ public class ServerApplication implements Runnable {
                 long offset = packet.getId() - 1;
                 raFile.seek(offset);
                 bis.read(fileByteArray, 0, packetSize);
-                System.out.println(String.format("Sending packet sequence: %d", packet.getId()));
+//                System.out.println(String.format("Sending packet sequence: %d", packet.getId()));
                 NetworkPacket fileContents = new NetworkPacket(packet.getId(), PacketType.DATA, fileByteArray.length, Arrays.copyOf(fileByteArray, fileByteArray.length));
                 fileTransfer.sendData(fileContents);
             }
