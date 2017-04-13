@@ -39,7 +39,6 @@ public class ServerApplication implements Runnable {
                 Socket socket = serverSocket.accept();
                 System.out.println("Connection Established " + socket);
 
-                System.out.println("Connection Established: " + socket);
                 newThread = new Thread(new ServerApplication(socket));
                 newThread.start();
 
