@@ -29,8 +29,7 @@ public class SocketEndPoint implements Callable<NetworkPacket>, Runnable {
         this.name = name;
     }
 
-    public SocketEndPoint(NetworkPacket networkPacket) throws IOException {
-        this.networkPacket = networkPacket;
+    public SocketEndPoint() throws IOException {
         String serverName = NetworkConfiguration.getProperty("host");
         int port = Integer.parseInt(NetworkConfiguration.getProperty("port"));
         this.socket = new Socket(serverName, port);
@@ -128,8 +127,16 @@ public class SocketEndPoint implements Callable<NetworkPacket>, Runnable {
 
     @Override
     public NetworkPacket call() throws Exception {
-        dataTransfer.sendData(networkPacket);
+        dataTransfer.sendData(getNetworkPacket());
         return dataTransfer.receiveData();
+    }
+
+    public NetworkPacket getNetworkPacket() {
+        return networkPacket;
+    }
+
+    public void setNetworkPacket(NetworkPacket networkPacket) {
+        this.networkPacket = networkPacket;
     }
 }
 
