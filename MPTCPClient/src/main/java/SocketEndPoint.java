@@ -3,10 +3,7 @@ import Network.NetworkConfiguration;
 import Network.NetworkPacket;
 import Network.PacketType;
 
-import java.io.BufferedOutputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.net.Socket;
 import java.util.concurrent.Callable;
 
@@ -127,8 +124,19 @@ public class SocketEndPoint implements Callable<NetworkPacket>, Runnable {
 
     @Override
     public NetworkPacket call() throws Exception {
-        dataTransfer.sendData(getNetworkPacket());
-        return dataTransfer.receiveData();
+        try {
+            dataTransfer.sendData(getNetworkPacket());
+            return dataTransfer.receiveData();
+        } catch (InterruptedIOException ex) {
+            close();
+            return null;
+        }
+    }
+
+    public void close() throws IOException {
+        dataTransfer.close();
+        socket.close();
+        System.out.println("End Points closed..");
     }
 
     public NetworkPacket getNetworkPacket() {
