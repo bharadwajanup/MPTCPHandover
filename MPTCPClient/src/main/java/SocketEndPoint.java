@@ -8,23 +8,36 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.Socket;
+import java.util.concurrent.Callable;
 
 /**
  * Created as part of the class project for Mobile Computing
  */
-public class SocketThread implements Runnable {
+public class SocketEndPoint implements Callable<NetworkPacket>, Runnable {
     private Object schedulerCall;
     private Scheduler scheduler;
     private String storePath;
     private String name;
+    private NetworkPacket networkPacket;
+    private Socket socket;
+    private DataTransfer dataTransfer;
 
-    public SocketThread(Object schedulerCall, Scheduler scheduler, String storePath, String name) {
+    public SocketEndPoint(Object schedulerCall, Scheduler scheduler, String storePath, String name) {
         this.schedulerCall = schedulerCall;
         this.scheduler = scheduler;
         this.storePath = storePath;
         this.name = name;
     }
 
+    public SocketEndPoint(NetworkPacket networkPacket) throws IOException {
+        this.networkPacket = networkPacket;
+        String serverName = NetworkConfiguration.getProperty("host");
+        int port = Integer.parseInt(NetworkConfiguration.getProperty("port"));
+        this.socket = new Socket(serverName, port);
+        this.dataTransfer = new DataTransfer(socket);
+    }
+
+    @Deprecated
     @Override
     public void run() {
         try {
@@ -111,6 +124,12 @@ public class SocketThread implements Runnable {
             e.printStackTrace();
         }
 
+    }
+
+    @Override
+    public NetworkPacket call() throws Exception {
+        dataTransfer.sendData(networkPacket);
+        return dataTransfer.receiveData();
     }
 }
 
