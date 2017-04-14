@@ -31,7 +31,8 @@ public class PacketDownloader implements Runnable {
                 NetworkPacket packet = packets.take();
                 arrayFile.seek(packet.getId() - 1);
                 bos.write(packet.getData(), 0, packet.getLength());
-                System.out.println(String.format("Worker FileDownloader stored the packet %d", packet.getId()));
+                System.out.println(new String(packet.getData()));
+//                System.out.println(String.format("Worker FileDownloader stored the packet %d", packet.getId()));
             }
         } catch (FileNotFoundException fex) {
             System.out.println("File Not Found");
