@@ -39,8 +39,13 @@ public class PacketDownloader implements Runnable {
             fex.printStackTrace();
 
         } catch (InterruptedException e) {
-            System.out.println("Thread was Interrupted");
-            e.printStackTrace();
+            System.out.println("Worker Thread was Interrupted");
+            try {
+                bos.close();
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+            //e.printStackTrace();
         } catch (IOException e) {
             System.out.println("There was an IO exception");
             e.printStackTrace();

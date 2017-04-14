@@ -30,7 +30,6 @@ public class ServerApplication implements Runnable {
             e.printStackTrace();
         }
 
-
         System.out.println("Server Started...");
         Thread newThread = null;
         while (true) {
