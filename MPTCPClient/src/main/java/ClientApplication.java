@@ -1,6 +1,8 @@
-import Network.NetworkConfiguration;
-import Network.NetworkPacket;
-import Network.PacketType;
+import common.Tuple;
+import network.NetworkConfiguration;
+import network.NetworkPacket;
+import network.PacketType;
+import network.SocketEndPoint;
 
 import java.io.IOException;
 import java.util.concurrent.*;
@@ -14,10 +16,10 @@ public class ClientApplication {
 
     public static Tuple<NetworkPacket, Long> calculateLatency(SocketEndPoint endPoint, ExecutorService executor) throws ExecutionException, InterruptedException {
         long startTime = System.currentTimeMillis();
-        Future<NetworkPacket> future =  executor.submit((Callable)endPoint);
+        Future<NetworkPacket> future = executor.submit((Callable) endPoint);
         NetworkPacket packet = future.get();
         long endTime = System.currentTimeMillis();
-         return new Tuple<NetworkPacket, Long>(packet, endTime - startTime);
+        return new Tuple<>(packet, endTime - startTime);
     }
 
 
@@ -62,7 +64,7 @@ public class ClientApplication {
         wifiThread.join();
         lteThread.join();
         */
-        NetworkPacket packet =  new NetworkPacket(
+        NetworkPacket packet = new NetworkPacket(
                 1,
                 PacketType.INITIALIZER,
                 perPacketSize,
@@ -75,20 +77,20 @@ public class ClientApplication {
         SocketEndPoint ltePacket = new SocketEndPoint();
         SocketEndPoint sendingEndPoint;
         ArrayBlockingQueue<NetworkPacket> blockQueue = new ArrayBlockingQueue<NetworkPacket>(1024);
-        PacketDownloader downloadPacket = new PacketDownloader(blockQueue, storePath + "/"+fileName);
+        PacketDownloader downloadPacket = new PacketDownloader(blockQueue, storePath + "\\" + fileName);
         executor.execute(downloadPacket);
 
         wifiPacket.setNetworkPacket(packet);
         Tuple<NetworkPacket, Long> result = calculateLatency(wifiPacket, executor);
-        scheduler.addToTable(wifiPacket,result.y);
+        scheduler.addToTable(wifiPacket, result.y);
 
         ltePacket.setNetworkPacket(packet);
-        result = calculateLatency(ltePacket,executor);
-        scheduler.addToTable(ltePacket,result.y);
+        result = calculateLatency(ltePacket, executor);
+        scheduler.addToTable(ltePacket, result.y);
 
         curAck = packet.getId();
 
-        while(true) {
+        while (true) {
             sendingEndPoint = scheduler.getScheduledEndPoint();
             packet = new NetworkPacket(curAck, PacketType.ACKNOWLEDGEMENT, 0, null);
             sendingEndPoint.setNetworkPacket(packet);
@@ -102,8 +104,10 @@ public class ClientApplication {
         }
 
         System.out.println("File Downloaded...");
-        boolean terminated = executor.awaitTermination(3,TimeUnit.SECONDS);
-        if(!terminated)
+        wifiPacket.close();
+        ltePacket.close();
+        boolean terminated = executor.awaitTermination(3, TimeUnit.SECONDS);
+        if (!terminated)
             executor.shutdownNow();
     }
 }

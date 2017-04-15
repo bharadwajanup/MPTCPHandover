@@ -1,4 +1,4 @@
-package Network;
+package network;
 /**
  * Created as part of the class project for Mobile Computing
  */

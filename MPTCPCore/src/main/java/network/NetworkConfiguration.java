@@ -1,4 +1,4 @@
-package Network;
+package network;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;

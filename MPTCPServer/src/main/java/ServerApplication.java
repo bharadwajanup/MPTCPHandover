@@ -1,7 +1,7 @@
-import Network.DataTransfer;
-import Network.NetworkConfiguration;
-import Network.NetworkPacket;
-import Network.PacketType;
+import network.DataTransfer;
+import network.NetworkConfiguration;
+import network.NetworkPacket;
+import network.PacketType;
 
 import java.io.*;
 import java.net.ServerSocket;

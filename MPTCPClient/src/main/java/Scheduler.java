@@ -1,3 +1,5 @@
+import network.SocketEndPoint;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -28,8 +30,7 @@ public class Scheduler {
                 min = entry;
                 continue;
             }
-            if(min.getValue() > entry.getValue())
-            {
+            if(min.getValue() > entry.getValue()) {
                 min = entry;
             }
         }
@@ -40,8 +41,7 @@ public class Scheduler {
         latencyMap.put(key, calcLatency(val));
     }
 
-    public void updateTable(SocketEndPoint key, long val)
-    {
+    public void updateTable(SocketEndPoint key, long val) {
         latencyMap.replace(key,calcLatency(val));
     }
 

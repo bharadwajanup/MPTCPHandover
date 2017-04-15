@@ -1,4 +1,4 @@
-import Network.NetworkPacket;
+import network.NetworkPacket;
 
 import java.io.*;
 import java.util.concurrent.BlockingQueue;
@@ -14,7 +14,7 @@ public class PacketDownloader implements Runnable {
     public PacketDownloader(BlockingQueue<NetworkPacket> queue, String path) {
         this.packets = queue;
         this.path = path;
-
+        System.out.println("Downloading to path " + path);
 
     }
 
@@ -31,8 +31,8 @@ public class PacketDownloader implements Runnable {
                 NetworkPacket packet = packets.take();
                 arrayFile.seek(packet.getId() - 1);
                 bos.write(packet.getData(), 0, packet.getLength());
-                System.out.println(new String(packet.getData()));
-//                System.out.println(String.format("Worker FileDownloader stored the packet %d", packet.getId()));
+//                System.out.println(new String(packet.getData()));
+                System.out.println(String.format("Worker FileDownloader stored the packet %d", packet.getId()));
             }
         } catch (FileNotFoundException fex) {
             System.out.println("File Not Found");
@@ -42,6 +42,7 @@ public class PacketDownloader implements Runnable {
             System.out.println("Worker Thread was Interrupted");
             try {
                 bos.close();
+                arrayFile.close();
             } catch (IOException e1) {
                 e1.printStackTrace();
             }
