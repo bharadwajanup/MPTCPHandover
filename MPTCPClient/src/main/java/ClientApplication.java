@@ -73,8 +73,8 @@ public class ClientApplication {
 
         Scheduler scheduler = new Scheduler();
         ExecutorService executor = Executors.newFixedThreadPool(3);
-        SocketEndPoint wifiPacket = new SocketEndPoint();
-        SocketEndPoint ltePacket = new SocketEndPoint();
+        SocketEndPoint wifiPacket = new SocketEndPoint("Wi-Fi");
+        SocketEndPoint ltePacket = new SocketEndPoint("LTE");
         SocketEndPoint sendingEndPoint;
         ArrayBlockingQueue<NetworkPacket> blockQueue = new ArrayBlockingQueue<NetworkPacket>(1024);
         PacketDownloader downloadPacket = new PacketDownloader(blockQueue, storePath + "\\" + fileName);
@@ -92,6 +92,7 @@ public class ClientApplication {
 
         while (true) {
             sendingEndPoint = scheduler.getScheduledEndPoint();
+            System.out.println("Scheduled to send via " + sendingEndPoint.getEndPointName());
             packet = new NetworkPacket(curAck, PacketType.ACKNOWLEDGEMENT, 0, null);
             sendingEndPoint.setNetworkPacket(packet);
             result = calculateLatency(sendingEndPoint, executor);

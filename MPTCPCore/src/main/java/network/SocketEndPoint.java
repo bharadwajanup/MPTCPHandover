@@ -16,6 +16,19 @@ public class SocketEndPoint implements Callable<NetworkPacket> {
     private NetworkPacket networkPacket;
     private Socket socket;
     private DataTransfer dataTransfer;
+    private String endPointName;
+
+    public SocketEndPoint(String name) throws IOException {
+        setEndPointName(name);
+        String serverName = NetworkConfiguration.getProperty("host");
+        int port = Integer.parseInt(NetworkConfiguration.getProperty("port"));
+        this.socket = new Socket(serverName, port);
+        this.dataTransfer = new DataTransfer(socket);
+    }
+
+    public String getEndPointName() {
+        return endPointName;
+    }
 
 //    @Deprecated
 //    public network.SocketEndPoint(Object schedulerCall, Scheduler scheduler, String storePath, String name) {
@@ -25,11 +38,8 @@ public class SocketEndPoint implements Callable<NetworkPacket> {
 //        this.name = name;
 //    }
 
-    public SocketEndPoint() throws IOException {
-        String serverName = NetworkConfiguration.getProperty("host");
-        int port = Integer.parseInt(NetworkConfiguration.getProperty("port"));
-        this.socket = new Socket(serverName, port);
-        this.dataTransfer = new DataTransfer(socket);
+    public void setEndPointName(String endPointName) {
+        this.endPointName = endPointName;
     }
 
 //    @Deprecated

@@ -7,6 +7,7 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Arrays;
+import java.util.Random;
 
 /**
  * Created as part of the class project for Mobile Computing
@@ -32,6 +33,7 @@ public class ServerApplication implements Runnable {
 
         System.out.println("Server Started...");
         Thread newThread = null;
+        int counter = 1;
         while (true) {
             try {
                 System.out.println("Accepting Connections");
@@ -39,6 +41,11 @@ public class ServerApplication implements Runnable {
                 System.out.println("Connection Established " + socket);
 
                 newThread = new Thread(new ServerApplication(socket));
+                String name = "Thread-" + counter;
+
+                newThread.setName(name);
+                counter++;
+                System.out.println("Thread " + name + " created.");
                 newThread.start();
 
                 if (newThread.isAlive())
@@ -60,6 +67,7 @@ public class ServerApplication implements Runnable {
     public void run() {
         try {
             DataTransfer fileTransfer = new DataTransfer(sock);
+            Random random = new Random();
 
             int packetSize = 0;
             byte[] fileByteArray = null;
@@ -68,6 +76,7 @@ public class ServerApplication implements Runnable {
             FileInputStream fis = null;
             BufferedInputStream bis = null;
             RandomAccessFile raFile = null;
+            int readLength;
             while (true) {
                 NetworkPacket packet = fileTransfer.receiveData();
 
@@ -96,9 +105,10 @@ public class ServerApplication implements Runnable {
                 }
                 long offset = packet.getId() - 1;
                 raFile.seek(offset);
-                bis.read(fileByteArray, 0, packetSize);
+                readLength = bis.read(fileByteArray, 0, packetSize);
 //                System.out.println(String.format("Sending packet sequence: %d", packet.getId()));
-                NetworkPacket fileContents = new NetworkPacket(packet.getId(), PacketType.DATA, fileByteArray.length, Arrays.copyOf(fileByteArray, fileByteArray.length));
+                NetworkPacket fileContents = new NetworkPacket(packet.getId(), PacketType.DATA, readLength, Arrays.copyOf(fileByteArray, readLength));
+                Thread.sleep(random.nextInt(1000));
                 fileTransfer.sendData(fileContents);
             }
 
@@ -107,7 +117,10 @@ public class ServerApplication implements Runnable {
 
             bis.close();
             fileTransfer.close();
-        } catch (IOException ex) {
+        } catch (EOFException ex) {
+            System.out.println("EOF EXCEPTION");
+            System.out.println(Thread.currentThread().getName());
+        } catch (Exception ex) {
             ex.printStackTrace();
         }
 
