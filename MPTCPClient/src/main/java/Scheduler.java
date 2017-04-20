@@ -1,5 +1,7 @@
 import network.SocketEndPoint;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -13,19 +15,21 @@ public class Scheduler {
     private int packetSize = 100;
     private int lteBandWidth = 50;
     private int wifiBandWidth = 75;
-    private HashMap<SocketEndPoint, Long> latencyMap;
+    private int windowSize = 100;
+    private HashMap<SocketEndPoint, Double> latencyMap;
+    private HashMap<SocketEndPoint, CircularArrayList<Double>> rttMap;
+    private double Wifi;
+    private double Lte;
 
     public Scheduler(){
-        latencyMap = new HashMap<SocketEndPoint, Long>();
-
-        //latency = (packetSize / delay) - bandWidth;
-
-
+        latencyMap = new HashMap<SocketEndPoint, Double>();
+        rttMap = new HashMap<SocketEndPoint, CircularArrayList<Double>>();
     }
 
-    public SocketEndPoint getScheduledEndPoint(){
-        Map.Entry<SocketEndPoint,Long> min = null;
-        for(Map.Entry<SocketEndPoint, Long> entry: latencyMap.entrySet()){
+    public SocketEndPoint getScheduledEndPoint() throws IOException {
+        //Map.Entry<SocketEndPoint,CircularArrayList> min = null;
+        /*
+        for(Map.Entry<SocketEndPoint, Double> entry: latencyMap.entrySet()){
             if(min == null){
                 min = entry;
                 continue;
@@ -35,14 +39,58 @@ public class Scheduler {
             }
         }
         return min.getKey();
+        */
+        double minVal = Double.MAX_VALUE;
+        SocketEndPoint min = null;
+        double wifiAvg = 0;
+        double lteAvg = 0;
+        for(Map.Entry<SocketEndPoint, CircularArrayList<Double>> rtt: rttMap.entrySet()){
+            CircularArrayList<Double> arr = rtt.getValue();
+            if(rtt.getKey().getEndPointName().equals("Wi-Fi")) {
+                int i;
+                for (i = 0; i < arr.size(); i ++) {
+                    wifiAvg += arr.get(i);
+                }
+                Wifi = wifiAvg/arr.size();
+                if (Wifi < minVal) {
+                    minVal = Wifi;
+                    min = rtt.getKey();
+                }
+            }
+            else{
+                int i;
+                for (i = 0; i < arr.size(); i ++) {
+                    lteAvg += arr.get(i);
+                }
+                Lte = lteAvg/arr.size();
+                if(Lte < minVal){
+                    minVal = Lte;
+                    min = rtt.getKey();
+                }
+            }
+
+        }
+        //String min = (Wifi < Lte)? "Wi-Fi" : "LTE";
+        return min;
+
     }
 
-    public void addToTable(SocketEndPoint key, long val){
-        latencyMap.put(key, calcLatency(val));
+    public void addToTable(SocketEndPoint key, double val){
+        latencyMap.put(key, val);
+        updateTable(key,val);
     }
 
-    public void updateTable(SocketEndPoint key, long val) {
-        latencyMap.replace(key,calcLatency(val));
+    public void updateTable(SocketEndPoint key, double val) {
+        CircularArrayList<Double> rttPoints;
+        if(rttMap.get(key) == null) {
+            rttPoints = new CircularArrayList<Double>(windowSize);
+            rttMap.put(key, rttPoints);
+        }
+        else {
+            rttPoints = rttMap.get(key);
+        }
+        rttPoints.add(rttPoints.size(), val);
+        rttMap.replace(key, rttPoints);
     }
 
     private long calcLatency(long delay){

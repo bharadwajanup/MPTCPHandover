@@ -77,7 +77,7 @@ public class ClientApplication {
         SocketEndPoint ltePacket = new SocketEndPoint("LTE");
         SocketEndPoint sendingEndPoint;
         ArrayBlockingQueue<NetworkPacket> blockQueue = new ArrayBlockingQueue<NetworkPacket>(1024);
-        PacketDownloader downloadPacket = new PacketDownloader(blockQueue, storePath + "\\" + fileName);
+        PacketDownloader downloadPacket = new PacketDownloader(blockQueue, storePath + "/" + fileName);
         executor.execute(downloadPacket);
 
         wifiPacket.setNetworkPacket(packet);
