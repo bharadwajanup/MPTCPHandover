@@ -17,6 +17,7 @@ public class SocketEndPoint implements Callable<NetworkPacket> {
     private Socket socket;
     private DataTransfer dataTransfer;
     private String endPointName;
+    private ConnectionProperties connectionProperties;
 
     public SocketEndPoint(String name) throws IOException {
         setEndPointName(name);
@@ -24,10 +25,19 @@ public class SocketEndPoint implements Callable<NetworkPacket> {
         int port = Integer.parseInt(NetworkConfiguration.getProperty("port"));
         this.socket = new Socket(serverName, port);
         this.dataTransfer = new DataTransfer(socket);
+        this.connectionProperties = new ConnectionProperties();
+    }
+
+    public ConnectionProperties getConnectionProperties() {
+        return connectionProperties;
     }
 
     public String getEndPointName() {
         return endPointName;
+    }
+
+    public void setEndPointName(String endPointName) {
+        this.endPointName = endPointName;
     }
 
 //    @Deprecated
@@ -38,8 +48,15 @@ public class SocketEndPoint implements Callable<NetworkPacket> {
 //        this.name = name;
 //    }
 
-    public void setEndPointName(String endPointName) {
-        this.endPointName = endPointName;
+    @Override
+    public NetworkPacket call() throws Exception {
+        try {
+            dataTransfer.sendData(getNetworkPacket());
+            return dataTransfer.receiveData();
+        } catch (InterruptedIOException ex) {
+            close();
+            return null;
+        }
     }
 
 //    @Deprecated
@@ -131,17 +148,6 @@ public class SocketEndPoint implements Callable<NetworkPacket> {
 //
 //    }
 
-    @Override
-    public NetworkPacket call() throws Exception {
-        try {
-            dataTransfer.sendData(getNetworkPacket());
-            return dataTransfer.receiveData();
-        } catch (InterruptedIOException ex) {
-            close();
-            return null;
-        }
-    }
-
     public void close() throws IOException {
         dataTransfer.close();
         socket.close();
@@ -154,6 +160,27 @@ public class SocketEndPoint implements Callable<NetworkPacket> {
 
     public void setNetworkPacket(NetworkPacket networkPacket) {
         this.networkPacket = networkPacket;
+    }
+
+    public class ConnectionProperties {
+        private double est_rtt;
+        private double dev_rtt;
+
+        public double getEst_rtt() {
+            return est_rtt;
+        }
+
+        public void setEst_rtt(double est_rtt) {
+            this.est_rtt = est_rtt;
+        }
+
+        public double getDev_rtt() {
+            return dev_rtt;
+        }
+
+        public void setDev_rtt(double dev_rtt) {
+            this.dev_rtt = dev_rtt;
+        }
     }
 }
 

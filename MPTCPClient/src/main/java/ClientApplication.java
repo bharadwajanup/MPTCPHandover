@@ -14,12 +14,28 @@ public class ClientApplication {
 
     public static String storePath = System.getProperty("user.dir");
 
-    public static Tuple<NetworkPacket, Long> calculateLatency(SocketEndPoint endPoint, ExecutorService executor) throws ExecutionException, InterruptedException {
+    public static Tuple<NetworkPacket, Double> calculateLatency(SocketEndPoint endPoint, ExecutorService executor) throws ExecutionException, InterruptedException {
         long startTime = System.currentTimeMillis();
         Future<NetworkPacket> future = executor.submit((Callable) endPoint);
         NetworkPacket packet = future.get();
         long endTime = System.currentTimeMillis();
-        return new Tuple<>(packet, endTime - startTime);
+        return new Tuple<>(packet, calcRTT(endPoint, endTime - startTime));
+    }
+
+    public static double calcRTT(SocketEndPoint endPoint, long sample_rtt) {
+        double est_rtt = endPoint.getConnectionProperties().getEst_rtt();
+        double dev_rtt = endPoint.getConnectionProperties().getDev_rtt();
+
+        est_rtt = (0.875 * est_rtt) + (0.125 * sample_rtt);
+        dev_rtt = (0.75 * dev_rtt) + (0.25 * (sample_rtt - est_rtt));
+
+        double rtt = est_rtt + 4 * dev_rtt;
+
+        endPoint.getConnectionProperties().setDev_rtt(dev_rtt);
+        endPoint.getConnectionProperties().setEst_rtt(est_rtt);
+
+        return rtt;
+
     }
 
 
@@ -29,41 +45,6 @@ public class ClientApplication {
         String fileName = NetworkConfiguration.getProperty("file");
         long curAck;
 
-       /* Scheduler scheduler = new Scheduler();
-        Object schedulerCall = new Object();
-        scheduler.setOffset(1);
-        String socketOwner = "WI-FI";
-        scheduler.setOwner(socketOwner);
-
-        Thread wifiThread = new Thread(new SocketThread(schedulerCall, scheduler, storePath + "\\" + "wifi\\", "WI-FI"));
-        wifiThread.setName("WI-FI");
-        Thread lteThread = new Thread(new SocketThread(schedulerCall, scheduler, storePath + "\\" + "wifi\\", "LTE"));
-        lteThread.setName("LTE");
-        wifiThread.start();
-        lteThread.start();
-
-
-        while (!scheduler.isTransferFinished()) {
-            synchronized (scheduler) {
-                while (!scheduler.getOwner().equals("SCH"))
-                    scheduler.wait();
-            }
-            socketOwner = socketOwner.equals("LTE") ? "WI-FI" : "LTE";
-            synchronized (scheduler) {
-                System.out.println("Scheduler changing Owner to " + socketOwner);
-                scheduler.setOwner(socketOwner);
-                scheduler.notifyAll();
-            }
-            synchronized (scheduler) {
-                scheduler.notifyAll();
-            }
-
-        }
-
-
-        wifiThread.join();
-        lteThread.join();
-        */
         NetworkPacket packet = new NetworkPacket(
                 1,
                 PacketType.INITIALIZER,
@@ -81,7 +62,7 @@ public class ClientApplication {
         executor.execute(downloadPacket);
 
         wifiPacket.setNetworkPacket(packet);
-        Tuple<NetworkPacket, Long> result = calculateLatency(wifiPacket, executor);
+        Tuple<NetworkPacket, Double> result = calculateLatency(wifiPacket, executor);
         scheduler.addToTable(wifiPacket, result.y);
 
         ltePacket.setNetworkPacket(packet);
@@ -97,6 +78,7 @@ public class ClientApplication {
             sendingEndPoint.setNetworkPacket(packet);
             result = calculateLatency(sendingEndPoint, executor);
             scheduler.updateTable(sendingEndPoint, result.y);
+            System.out.println("RTT= " + result.y);
             packet = result.x;
             if (packet.getType() == PacketType.CLOSE_INDICATOR)
                 break;
