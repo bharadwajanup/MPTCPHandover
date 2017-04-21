@@ -11,6 +11,7 @@ public class NetworkPacket implements Serializable {
     private PacketType type;
     private int length;
     private byte[] data;
+    private double latency;
 
     public NetworkPacket() {
 
@@ -56,4 +57,11 @@ public class NetworkPacket implements Serializable {
     }
 
 
+    public double getLatency() {
+        return latency;
+    }
+
+    public void setLatency(double latency) {
+        this.latency = latency;
+    }
 }

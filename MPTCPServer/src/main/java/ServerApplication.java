@@ -3,7 +3,10 @@ import network.NetworkConfiguration;
 import network.NetworkPacket;
 import network.PacketType;
 
-import java.io.*;
+import java.io.EOFException;
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Arrays;
@@ -15,6 +18,7 @@ import java.util.Random;
 public class ServerApplication implements Runnable {
     public static String filePath = System.getProperty("user.dir");
     Socket sock;
+    NetworkRTTInterpolator interpolator = null;
     private RandomAccessFile raFile;
     private int packetSize;
 
@@ -78,20 +82,24 @@ public class ServerApplication implements Runnable {
                         packet = initializeTransfer(packet);
                         break;
                     case PING:
-                        packet = createDummyPacketOfType(packet.getId(), PacketType.PING);
+                        packet = createEmptyPacketOfType(packet.getId(), PacketType.PING);
                         break;
                     case CLOSE_INDICATOR:
-                        packet = createDummyPacketOfType(packet.getId(), PacketType.CLOSE_INDICATOR);
+                        packet = createEmptyPacketOfType(packet.getId(), PacketType.CLOSE_INDICATOR);
                         break;
                     default:
                         if (packet.getId() >= raFile.length())
-                            packet = createDummyPacketOfType(packet.getId(), PacketType.CLOSE_INDICATOR);
+                            packet = createEmptyPacketOfType(packet.getId(), PacketType.CLOSE_INDICATOR);
                         else
                             packet = createDataPacket(packet.getId());
-//                        Thread.sleep(random.nextInt(1000));
+
 
                 }
-
+                int sleepVal = (int) interpolator.getY(packet.getId());
+                System.out.println("Sleeping for " + sleepVal);
+                Thread.sleep(sleepVal);
+                packet.setLatency(sleepVal);
+                System.out.println("Sending " + packet.getId());
                 fileTransfer.sendData(packet);
 
                 if (packet.getType() == PacketType.CLOSE_INDICATOR || packet.getId() >= raFile.length()) {
@@ -121,16 +129,18 @@ public class ServerApplication implements Runnable {
         return new NetworkPacket(id, PacketType.DATA, readLength, Arrays.copyOf(fileByteArray, readLength));
     }
 
-    private NetworkPacket createDummyPacketOfType(long id, PacketType packetType) {
+    private NetworkPacket createEmptyPacketOfType(long id, PacketType packetType) {
         return new NetworkPacket(id, packetType, 0, null);
     }
 
-    private NetworkPacket initializeTransfer(NetworkPacket packet) throws FileNotFoundException {
+    private synchronized NetworkPacket initializeTransfer(NetworkPacket packet) throws IOException {
         String fileName = new String(packet.getData());
 
-
-        File file = new File(filePath + "\\" + fileName);
+        String path = filePath + "\\" + "MPTCPServer\\" + fileName;
+        File file = new File(path);
+        System.out.println(path);
         raFile = new RandomAccessFile(file, "r");
+        interpolator = new NetworkRTTInterpolator(raFile.length() + 1000);
 
 //        FileInputStream fis = new FileInputStream(file);
 //        bis = new BufferedInputStream(fis);

@@ -19,7 +19,7 @@ public class ClientApplication {
         Future<NetworkPacket> future = executor.submit((Callable) endPoint);
         NetworkPacket packet = future.get();
         long endTime = System.currentTimeMillis();
-        return new Tuple<>(packet, calcRTT(endPoint, endTime - startTime));
+        return new Tuple<>(packet, (double) (endTime - startTime));
     }
 
     public static double calcRTT(SocketEndPoint endPoint, long sample_rtt) {
@@ -52,7 +52,7 @@ public class ClientApplication {
                 fileName.getBytes());
 
 
-        Scheduler scheduler = new Scheduler();
+        Scheduler scheduler = new Scheduler(10);
         ExecutorService executor = Executors.newFixedThreadPool(3);
         SocketEndPoint wifiPacket = new SocketEndPoint("Wi-Fi");
         SocketEndPoint ltePacket = new SocketEndPoint("LTE");
@@ -63,23 +63,54 @@ public class ClientApplication {
 
         wifiPacket.setNetworkPacket(packet);
         Tuple<NetworkPacket, Double> result = calculateLatency(wifiPacket, executor);
-        scheduler.addToTable(wifiPacket, result.y);
+//        scheduler.addToTable(wifiPacket, result.y);
+        scheduler.update(result.y);
 
         ltePacket.setNetworkPacket(packet);
         result = calculateLatency(ltePacket, executor);
-        scheduler.addToTable(ltePacket, result.y);
+//        scheduler.addToTable(ltePacket, result.y);
+        scheduler.update(result.y);
 
         curAck = packet.getId();
 
         while (true) {
-            sendingEndPoint = scheduler.getScheduledEndPoint();
-            System.out.println("Scheduled to send via " + sendingEndPoint.getEndPointName());
-            packet = new NetworkPacket(curAck, PacketType.ACKNOWLEDGEMENT, 0, null);
-            sendingEndPoint.setNetworkPacket(packet);
-            result = calculateLatency(sendingEndPoint, executor);
-            scheduler.updateTable(sendingEndPoint, result.y);
-            System.out.println("RTT= " + result.y);
-            packet = result.x;
+
+
+            if (scheduler.isMainFlow) {
+                sendingEndPoint = wifiPacket;
+                System.out.println("Scheduled to send via " + sendingEndPoint.getEndPointName());
+                packet = new NetworkPacket(curAck, PacketType.ACKNOWLEDGEMENT, 0, null);
+                sendingEndPoint.setNetworkPacket(packet);
+                result = calculateLatency(sendingEndPoint, executor);
+//                scheduler.updateTable(sendingEndPoint, result.y);
+                scheduler.update(result.y);
+//                System.out.println("RTT= " + result.y);
+                packet = result.x;
+
+            } else {
+                sendingEndPoint = ltePacket;
+                System.out.println("Scheduled to send via " + sendingEndPoint.getEndPointName());
+                packet = new NetworkPacket(curAck, PacketType.ACKNOWLEDGEMENT, 0, null);
+                sendingEndPoint.setNetworkPacket(packet);
+                result = calculateLatency(sendingEndPoint, executor);
+                packet = result.x;
+                wifiPacket.setNetworkPacket(new NetworkPacket(curAck, PacketType.PING, 0, null));
+                result = calculateLatency(wifiPacket, executor);
+//                scheduler.updateTable(sendingEndPoint, result.y);
+                scheduler.update(result.y);
+//                System.out.println("RTT= " + result.y);
+
+            }
+
+
+//            sendingEndPoint = scheduler.getScheduledEndPoint();
+//            System.out.println("Scheduled to send via " + sendingEndPoint.getEndPointName());
+//            packet = new NetworkPacket(curAck, PacketType.ACKNOWLEDGEMENT, 0, null);
+//            sendingEndPoint.setNetworkPacket(packet);
+//            result = calculateLatency(sendingEndPoint, executor);
+//            scheduler.updateTable(sendingEndPoint, result.y);
+//            System.out.println("RTT= " + result.y);
+//            packet = result.x;
             if (packet.getType() == PacketType.CLOSE_INDICATOR)
                 break;
             curAck = packet.getId() + perPacketSize;
