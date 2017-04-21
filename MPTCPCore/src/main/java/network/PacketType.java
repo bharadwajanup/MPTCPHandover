@@ -8,6 +8,7 @@ public enum PacketType implements Serializable {
     DATA,
     ACKNOWLEDGEMENT,
     CLOSE_INDICATOR,
-    INITIALIZER
+    INITIALIZER,
+    PING
 
 }

@@ -15,6 +15,8 @@ import java.util.Random;
 public class ServerApplication implements Runnable {
     public static String filePath = System.getProperty("user.dir");
     Socket sock;
+    private RandomAccessFile raFile;
+    private int packetSize;
 
     public ServerApplication(Socket sock) {
         this.sock = sock;
@@ -68,54 +70,38 @@ public class ServerApplication implements Runnable {
         try {
             DataTransfer fileTransfer = new DataTransfer(sock);
             Random random = new Random();
-
-            int packetSize = 0;
-            byte[] fileByteArray = null;
-            String fileName = null;
-            File file = null;
-            FileInputStream fis = null;
-            BufferedInputStream bis = null;
-            RandomAccessFile raFile = null;
-            int readLength;
             while (true) {
                 NetworkPacket packet = fileTransfer.receiveData();
 
-                if (packet.getType() == PacketType.INITIALIZER) {
-                    fileName = new String(packet.getData());
+                switch (packet.getType()) {
+                    case INITIALIZER:
+                        packet = initializeTransfer(packet);
+                        break;
+                    case PING:
+                        packet = createDummyPacketOfType(packet.getId(), PacketType.PING);
+                        break;
+                    case CLOSE_INDICATOR:
+                        packet = createDummyPacketOfType(packet.getId(), PacketType.CLOSE_INDICATOR);
+                        break;
+                    default:
+                        if (packet.getId() >= raFile.length())
+                            packet = createDummyPacketOfType(packet.getId(), PacketType.CLOSE_INDICATOR);
+                        else
+                            packet = createDataPacket(packet.getId());
+//                        Thread.sleep(random.nextInt(1000));
 
-
-                    file = new File(filePath + "\\" + fileName);
-                    raFile = new RandomAccessFile(file, "r");
-
-                    fis = new FileInputStream(file);
-                    bis = new BufferedInputStream(fis);
-                    packetSize = packet.getLength();
-                    fileByteArray = new byte[packetSize];
-                    NetworkPacket ackPacket = new NetworkPacket(1, PacketType.ACKNOWLEDGEMENT, 0, null);
-                    System.out.println("Sending ACK for Initiliazer");
-                    fileTransfer.sendData(ackPacket);
-                    continue;
                 }
 
+                fileTransfer.sendData(packet);
 
-                if (packet.getType() == PacketType.CLOSE_INDICATOR || packet.getId() >= file.length()) {
-                    NetworkPacket endOfFile = new NetworkPacket(file.length(), PacketType.CLOSE_INDICATOR, 0, null);
-                    fileTransfer.sendData(endOfFile);
+                if (packet.getType() == PacketType.CLOSE_INDICATOR || packet.getId() >= raFile.length()) {
                     break;
                 }
-                long offset = packet.getId() - 1;
-                raFile.seek(offset);
-                readLength = bis.read(fileByteArray, 0, packetSize);
-//                System.out.println(String.format("Sending packet sequence: %d", packet.getId()));
-                NetworkPacket fileContents = new NetworkPacket(packet.getId(), PacketType.DATA, readLength, Arrays.copyOf(fileByteArray, readLength));
-                Thread.sleep(random.nextInt(1000));
-                fileTransfer.sendData(fileContents);
             }
 
-
-            System.out.println(String.format("Requested file %s successfully sent", fileName));
-
-            bis.close();
+            System.out.println(String.format("Requested file %s successfully sent", ""));
+//            bis.close();
+            raFile.close();
             fileTransfer.close();
         } catch (EOFException ex) {
             System.out.println("EOF EXCEPTION");
@@ -124,5 +110,34 @@ public class ServerApplication implements Runnable {
             ex.printStackTrace();
         }
 
+    }
+
+    private synchronized NetworkPacket createDataPacket(long id) throws IOException {
+        byte[] fileByteArray = new byte[packetSize];
+        int readLength;
+        raFile.seek(id - 1);
+        readLength = raFile.read(fileByteArray);
+//        readLength = bis.read(fileByteArray, 0, packetSize);
+        return new NetworkPacket(id, PacketType.DATA, readLength, Arrays.copyOf(fileByteArray, readLength));
+    }
+
+    private NetworkPacket createDummyPacketOfType(long id, PacketType packetType) {
+        return new NetworkPacket(id, packetType, 0, null);
+    }
+
+    private NetworkPacket initializeTransfer(NetworkPacket packet) throws FileNotFoundException {
+        String fileName = new String(packet.getData());
+
+
+        File file = new File(filePath + "\\" + fileName);
+        raFile = new RandomAccessFile(file, "r");
+
+//        FileInputStream fis = new FileInputStream(file);
+//        bis = new BufferedInputStream(fis);
+        packetSize = packet.getLength();
+//        fileByteArray = new byte[packetSize];
+        NetworkPacket ackPacket = new NetworkPacket(1, PacketType.ACKNOWLEDGEMENT, 0, null);
+        System.out.println("Sending ACK for Initiliazer");
+        return ackPacket;
     }
 }
