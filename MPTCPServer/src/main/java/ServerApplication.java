@@ -3,14 +3,14 @@ import network.NetworkConfiguration;
 import network.NetworkPacket;
 import network.PacketType;
 
-import java.io.EOFException;
-import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Created as part of the class project for Mobile Computing
@@ -18,7 +18,6 @@ import java.util.Random;
 public class ServerApplication implements Runnable {
     public static String filePath = System.getProperty("user.dir");
     Socket sock;
-    NetworkRTTInterpolator interpolator = null;
     private RandomAccessFile raFile;
     private int packetSize;
 
@@ -26,7 +25,7 @@ public class ServerApplication implements Runnable {
         this.sock = sock;
     }
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, IOException {
 
 
         ServerSocket serverSocket = null;
@@ -45,25 +44,35 @@ public class ServerApplication implements Runnable {
                 System.out.println("Accepting Connections");
                 Socket socket = serverSocket.accept();
                 System.out.println("Connection Established " + socket);
+                ExecutorService executor = Executors.newFixedThreadPool(4);
 
-                newThread = new Thread(new ServerApplication(socket));
-                String name = "Thread-" + counter;
+                //newThread = new ServerApplication(socket);
+                /*String name = "Thread-" + counter;
 
                 newThread.setName(name);
                 counter++;
                 System.out.println("Thread " + name + " created.");
-                newThread.start();
 
-                if (newThread.isAlive())
+                newThread.start();
+                  */
+
+                executor.execute(new ServerApplication(socket));
+
+
+                /*if (newThread.isAlive())
                     System.out.println("Thread is still alive!");
                 else
                     System.out.println("Thread is dead!");
-
+                */
             } catch (IOException ex) {
                 ex.printStackTrace();
-                newThread.join();
+                //newThread.join();
                 break;
             }
+            catch (Exception e){
+                System.out.println("I was interrupted");
+            }
+
         }
 
 
@@ -71,8 +80,9 @@ public class ServerApplication implements Runnable {
 
     @Override
     public void run() {
+        DataTransfer fileTransfer = null;
         try {
-            DataTransfer fileTransfer = new DataTransfer(sock);
+            fileTransfer = new DataTransfer(sock);
             Random random = new Random();
             while (true) {
                 NetworkPacket packet = fileTransfer.receiveData();
@@ -82,24 +92,20 @@ public class ServerApplication implements Runnable {
                         packet = initializeTransfer(packet);
                         break;
                     case PING:
-                        packet = createEmptyPacketOfType(packet.getId(), PacketType.PING);
+                        packet = createDummyPacketOfType(packet.getId(), PacketType.PING);
                         break;
                     case CLOSE_INDICATOR:
-                        packet = createEmptyPacketOfType(packet.getId(), PacketType.CLOSE_INDICATOR);
+                        packet = createDummyPacketOfType(packet.getId(), PacketType.CLOSE_INDICATOR);
                         break;
                     default:
                         if (packet.getId() >= raFile.length())
-                            packet = createEmptyPacketOfType(packet.getId(), PacketType.CLOSE_INDICATOR);
+                            packet = createDummyPacketOfType(packet.getId(), PacketType.CLOSE_INDICATOR);
                         else
                             packet = createDataPacket(packet.getId());
-
+//                        Thread.sleep(random.nextInt(1000));
 
                 }
-                int sleepVal = (int) interpolator.getY(packet.getId());
-                System.out.println("Sleeping for " + sleepVal);
-                Thread.sleep(sleepVal);
-                packet.setLatency(sleepVal);
-                System.out.println("Sending " + packet.getId());
+
                 fileTransfer.sendData(packet);
 
                 if (packet.getType() == PacketType.CLOSE_INDICATOR || packet.getId() >= raFile.length()) {
@@ -109,13 +115,24 @@ public class ServerApplication implements Runnable {
 
             System.out.println(String.format("Requested file %s successfully sent", ""));
 //            bis.close();
-            raFile.close();
             fileTransfer.close();
+
         } catch (EOFException ex) {
             System.out.println("EOF EXCEPTION");
             System.out.println(Thread.currentThread().getName());
-        } catch (Exception ex) {
+        }catch (Exception ex) {
             ex.printStackTrace();
+        }
+        finally {
+            System.out.println("Threads interrupted!");
+            try {
+                if(fileTransfer != null){
+                    fileTransfer.close();
+                }
+                raFile.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
     }
@@ -129,18 +146,16 @@ public class ServerApplication implements Runnable {
         return new NetworkPacket(id, PacketType.DATA, readLength, Arrays.copyOf(fileByteArray, readLength));
     }
 
-    private NetworkPacket createEmptyPacketOfType(long id, PacketType packetType) {
+    private NetworkPacket createDummyPacketOfType(long id, PacketType packetType) {
         return new NetworkPacket(id, packetType, 0, null);
     }
 
-    private synchronized NetworkPacket initializeTransfer(NetworkPacket packet) throws IOException {
+    private NetworkPacket initializeTransfer(NetworkPacket packet) throws FileNotFoundException {
         String fileName = new String(packet.getData());
 
-        String path = filePath + "\\" + "MPTCPServer\\" + fileName;
-        File file = new File(path);
-        System.out.println(path);
+
+        File file = new File(filePath + "\\" + fileName);
         raFile = new RandomAccessFile(file, "r");
-        interpolator = new NetworkRTTInterpolator(raFile.length() + 1000);
 
 //        FileInputStream fis = new FileInputStream(file);
 //        bis = new BufferedInputStream(fis);
