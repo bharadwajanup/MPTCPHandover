@@ -16,7 +16,9 @@ public class NetworkRTTInterpolator {
 
     }
 
-    public double getY(double x) {
+    public double getY(double x, String endPoint) {
+        if (endPoint.equals("LTE"))
+            return 80;
         return function.value(x);
     }
 

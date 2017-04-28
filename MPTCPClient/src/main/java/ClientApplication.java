@@ -14,12 +14,26 @@ public class ClientApplication {
 
     public static String storePath = System.getProperty("user.dir");
 
-    public static Tuple<NetworkPacket, Double> calculateLatency(SocketEndPoint endPoint, ExecutorService executor) throws ExecutionException, InterruptedException {
-        long startTime = System.currentTimeMillis();
-        Future<NetworkPacket> future = executor.submit((Callable) endPoint);
-        NetworkPacket packet = future.get();
-        long endTime = System.currentTimeMillis();
-        return new Tuple<>(packet, (double) (endTime - startTime));
+    public static Tuple<NetworkPacket, Double> calculateLatency(SocketEndPoint endPoint, ExecutorService executor, Scheduler scheduler) throws ExecutionException, InterruptedException {
+        long startTime = System.currentTimeMillis(), endTime;
+        Future<NetworkPacket> future = executor.submit(endPoint);
+        NetworkPacket packet = null;
+
+        try {
+            int timeout = 0;
+            if (!endPoint.getEndPointName().equals("LTE"))
+                timeout = (int) scheduler.getTimeout();
+            endPoint.setTimeout(timeout);
+            packet = future.get();
+
+//                packet = future.get();
+            endTime = System.currentTimeMillis();
+            return new Tuple<>(packet, (double) (endTime - startTime));
+        } catch (Exception t) {
+            endTime = System.currentTimeMillis();
+            return new Tuple<>(packet, (double) (endTime - startTime));
+        }
+
     }
 
     public static double calcRTT(SocketEndPoint endPoint, long sample_rtt) {
@@ -49,7 +63,8 @@ public class ClientApplication {
                 1,
                 PacketType.INITIALIZER,
                 perPacketSize,
-                fileName.getBytes());
+                fileName.getBytes(),
+                null);
 
 
         Scheduler scheduler = new Scheduler(10);
@@ -60,14 +75,14 @@ public class ClientApplication {
         ArrayBlockingQueue<NetworkPacket> blockQueue = new ArrayBlockingQueue<NetworkPacket>(1024);
         PacketDownloader downloadPacket = new PacketDownloader(blockQueue, storePath + "/" + fileName);
         executor.execute(downloadPacket);
-
+        packet.setEndPoint(wifiPacket.getEndPointName());
         wifiPacket.setNetworkPacket(packet);
-        Tuple<NetworkPacket, Double> result = calculateLatency(wifiPacket, executor);
+        Tuple<NetworkPacket, Double> result = calculateLatency(wifiPacket, executor, scheduler);
 //        scheduler.addToTable(wifiPacket, result.y);
         scheduler.update(result.y);
-
+        packet.setEndPoint(ltePacket.getEndPointName());
         ltePacket.setNetworkPacket(packet);
-        result = calculateLatency(ltePacket, executor);
+        result = calculateLatency(ltePacket, executor, scheduler);
 //        scheduler.addToTable(ltePacket, result.y);
         scheduler.update(result.y);
 
@@ -76,28 +91,31 @@ public class ClientApplication {
         while (true) {
 
 
-            if (scheduler.isMainFlow) {
+            if (scheduler.isMainFlow()) {
                 sendingEndPoint = wifiPacket;
-                System.out.println("Scheduled to send via " + sendingEndPoint.getEndPointName());
-                packet = new NetworkPacket(curAck, PacketType.ACKNOWLEDGEMENT, 0, null);
+//                System.out.println("Scheduled to send via " + sendingEndPoint.getEndPointName());
+                packet = new NetworkPacket(curAck, PacketType.ACKNOWLEDGEMENT, 0, null, sendingEndPoint.getEndPointName());
                 sendingEndPoint.setNetworkPacket(packet);
-                result = calculateLatency(sendingEndPoint, executor);
+                result = calculateLatency(sendingEndPoint, executor, scheduler);
 //                scheduler.updateTable(sendingEndPoint, result.y);
                 scheduler.update(result.y);
-//                System.out.println("RTT= " + result.y);
+                printRTTLog(sendingEndPoint, result.y);
                 packet = result.x;
 
             } else {
                 sendingEndPoint = ltePacket;
-                System.out.println("Scheduled to send via " + sendingEndPoint.getEndPointName());
-                packet = new NetworkPacket(curAck, PacketType.ACKNOWLEDGEMENT, 0, null);
+//                System.out.println("Scheduled to send via " + sendingEndPoint.getEndPointName());
+                packet = new NetworkPacket(curAck, PacketType.ACKNOWLEDGEMENT, 0, null, sendingEndPoint.getEndPointName());
                 sendingEndPoint.setNetworkPacket(packet);
-                result = calculateLatency(sendingEndPoint, executor);
+                result = calculateLatency(sendingEndPoint, executor, scheduler);
                 packet = result.x;
-                wifiPacket.setNetworkPacket(new NetworkPacket(curAck, PacketType.PING, 0, null));
-                result = calculateLatency(wifiPacket, executor);
+
+                printRTTLog(sendingEndPoint, result.y);
+                wifiPacket.setNetworkPacket(new NetworkPacket(curAck, PacketType.PING, 0, null, wifiPacket.getEndPointName()));
+                result = calculateLatency(wifiPacket, executor, scheduler);
 //                scheduler.updateTable(sendingEndPoint, result.y);
                 scheduler.update(result.y);
+                printRTTLog(wifiPacket, result.y);
 //                System.out.println("RTT= " + result.y);
 
             }
@@ -111,10 +129,17 @@ public class ClientApplication {
 //            scheduler.updateTable(sendingEndPoint, result.y);
 //            System.out.println("RTT= " + result.y);
 //            packet = result.x;
+            if (packet == null) {
+//                scheduler.setMainFlow(!scheduler.isMainFlow());
+                continue;
+            }
             if (packet.getType() == PacketType.CLOSE_INDICATOR)
                 break;
-            curAck = packet.getId() + perPacketSize;
-            blockQueue.add(packet);
+
+            if (packet.getId() >= curAck && packet.getType() == PacketType.DATA) {
+                curAck = packet.getId() + perPacketSize;
+                blockQueue.add(packet);
+            }
         }
 
         System.out.println("File Downloaded...");
@@ -123,5 +148,10 @@ public class ClientApplication {
         boolean terminated = executor.awaitTermination(3, TimeUnit.SECONDS);
         if (!terminated)
             executor.shutdownNow();
+    }
+
+    private static void printRTTLog(SocketEndPoint sendingEndPoint, Double y) {
+        String message = String.format("%s\t%f", sendingEndPoint.getEndPointName(), y);
+        System.out.println(message);
     }
 }

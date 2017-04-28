@@ -9,12 +9,12 @@ import java.util.Map;
  * Created as part of the class project for Mobile Computing
  */
 public class Scheduler {
-    public boolean isMainFlow;
+    private boolean isMainFlow;
     private DescriptiveStatistics dataManager;
     private String owner;
     private long offset;
     private boolean transferFinished = false;
-    private int windowSize = 100;
+    private int windowSize = 40;
     private HashMap<SocketEndPoint, Double> latencyMap;
     private HashMap<SocketEndPoint, CircularArrayList<Double>> rttMap;
     private double Wifi;
@@ -26,8 +26,12 @@ public class Scheduler {
         rttMap = new HashMap<SocketEndPoint, CircularArrayList<Double>>();
         dataManager = new DescriptiveStatistics(windowSize);
         magicValue = 0.2;
-        isMainFlow = true;
+        setMainFlow(true);
 
+    }
+
+    public long getTimeout() {
+        return (long) ((long) dataManager.getMean() * (1 + magicValue));
     }
 
 
@@ -98,7 +102,7 @@ public class Scheduler {
 
         double changeInVal = getChangeInLatency(curMean, val);
 
-        isMainFlow = changeInVal < magicValue;
+        setMainFlow(changeInVal < magicValue);
     }
 
     public void updateTable(SocketEndPoint key, double val) {
@@ -145,4 +149,11 @@ public class Scheduler {
     }
 
 
+    public boolean isMainFlow() {
+        return isMainFlow;
+    }
+
+    public void setMainFlow(boolean mainFlow) {
+        isMainFlow = mainFlow;
+    }
 }

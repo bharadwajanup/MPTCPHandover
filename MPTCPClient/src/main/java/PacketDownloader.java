@@ -1,4 +1,5 @@
 import network.NetworkPacket;
+import network.PacketType;
 
 import java.io.*;
 import java.util.concurrent.BlockingQueue;
@@ -29,10 +30,18 @@ public class PacketDownloader implements Runnable {
             bos = new BufferedOutputStream(fout);
             while (true) {
                 NetworkPacket packet = packets.take();
+                if (packet.getType() != PacketType.DATA) {
+                    System.out.println("Type was not data");
+                    continue;
+                }
+                if (packet == null || packet.getData() == null) {
+                    System.out.println("Packet was null!");
+                    continue;
+                }
                 arrayFile.seek(packet.getId() - 1);
                 bos.write(packet.getData(), 0, packet.getLength());
 //                System.out.println(new String(packet.getData()));
-                System.out.println(String.format("Worker FileDownloader stored the packet %d", packet.getId()));
+//                System.out.println(String.format("Worker FileDownloader stored the packet %d", packet.getId()));
             }
         } catch (FileNotFoundException fex) {
             System.out.println("File Not Found");
@@ -50,6 +59,10 @@ public class PacketDownloader implements Runnable {
         } catch (IOException e) {
             System.out.println("There was an IO exception");
             e.printStackTrace();
+        } catch (NullPointerException n) {
+            n.printStackTrace();
+            System.out.println("Something was Null");
+
         }
     }
 }

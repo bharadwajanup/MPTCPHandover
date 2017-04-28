@@ -12,16 +12,18 @@ public class NetworkPacket implements Serializable {
     private int length;
     private byte[] data;
     private double latency;
+    private String endPoint;
 
     public NetworkPacket() {
 
     }
 
-    public NetworkPacket(long id, PacketType type, int length, byte[] data) {
+    public NetworkPacket(long id, PacketType type, int length, byte[] data, String endPoint) {
         this.id = id;
         this.type = type;
         this.length = length;
         this.data = data;
+        setEndPoint(endPoint);
     }
 
     public long getId() {
@@ -63,5 +65,13 @@ public class NetworkPacket implements Serializable {
 
     public void setLatency(double latency) {
         this.latency = latency;
+    }
+
+    public String getEndPoint() {
+        return endPoint;
+    }
+
+    public void setEndPoint(String endPoint) {
+        this.endPoint = endPoint;
     }
 }

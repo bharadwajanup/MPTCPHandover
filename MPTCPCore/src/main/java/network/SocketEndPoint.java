@@ -3,6 +3,7 @@ package network;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.concurrent.Callable;
 
 /**
@@ -40,6 +41,10 @@ public class SocketEndPoint implements Callable<NetworkPacket> {
         this.endPointName = endPointName;
     }
 
+    public void setTimeout(int timeout) throws SocketException {
+        socket.setSoTimeout(timeout);
+    }
+
 //    @Deprecated
 //    public network.SocketEndPoint(Object schedulerCall, Scheduler scheduler, String storePath, String name) {
 //        this.schedulerCall = schedulerCall;
@@ -51,7 +56,11 @@ public class SocketEndPoint implements Callable<NetworkPacket> {
     @Override
     public NetworkPacket call() throws Exception {
         try {
+            long n = dataTransfer.getInputStream().skip(dataTransfer.getInputStream().available());
+            if (n > 0)
+                System.out.println("\n\n\n\n\n\n\nSkipped " + n + " bytes\n\n\n\n\n\n\n\n");
             dataTransfer.sendData(getNetworkPacket());
+
             return dataTransfer.receiveData();
         } catch (InterruptedIOException ex) {
             close();

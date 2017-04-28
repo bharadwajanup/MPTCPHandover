@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 
 /**
  * Created as part of the class project for Mobile Computing
@@ -31,6 +32,15 @@ public class DataTransfer {
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
             return null;
+
+        } catch (SocketTimeoutException s) {
+            System.out.println("Timeout");
+            return null;
+        } catch (Exception e) {
+            System.out.println("Exception during DataTransfer");
+            System.out.println(e.getMessage());
+            e.printStackTrace();
+            return null;
         }
     }
 
@@ -48,7 +58,7 @@ public class DataTransfer {
         this.socket = socket;
     }
 
-    private ObjectInputStream getInputStream() {
+    public ObjectInputStream getInputStream() {
         return inputStream;
     }
 
