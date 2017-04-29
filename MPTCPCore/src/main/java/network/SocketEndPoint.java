@@ -10,10 +10,7 @@ import java.util.concurrent.Callable;
  * Created as part of the class project for Mobile Computing
  */
 public class SocketEndPoint implements Callable<NetworkPacket> {
-    //    private Object schedulerCall;
-//    private Scheduler scheduler;
-//    private String storePath;
-//    private String name;
+
     private NetworkPacket networkPacket;
     private Socket socket;
     private DataTransfer dataTransfer;
@@ -56,12 +53,22 @@ public class SocketEndPoint implements Callable<NetworkPacket> {
     @Override
     public NetworkPacket call() throws Exception {
         try {
-            long n = dataTransfer.getInputStream().skip(dataTransfer.getInputStream().available());
-            if (n > 0)
-                System.out.println("\n\n\n\n\n\n\nSkipped " + n + " bytes\n\n\n\n\n\n\n\n");
             dataTransfer.sendData(getNetworkPacket());
 
-            return dataTransfer.receiveData();
+            NetworkPacket packet;
+//            System.out.println("Sending");
+//            System.out.println(getNetworkPacket());
+//            long start = System.currentTimeMillis();
+            do {
+                packet = dataTransfer.receiveData();
+                if (packet == null)
+                    break;
+            }
+            while (packet.getId() < getNetworkPacket().getId() || (getNetworkPacket().getType() == PacketType.PING && packet.getType() != PacketType.PING));
+//            System.out.println("Took "+(System.currentTimeMillis() - start)+" to get the packet for");
+
+//            System.out.println(packet);
+            return packet;
         } catch (InterruptedIOException ex) {
             close();
             return null;

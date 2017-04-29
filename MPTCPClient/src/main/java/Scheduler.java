@@ -34,17 +34,17 @@ public class Scheduler {
         return (long) ((long) dataManager.getMean() * (1 + magicValue));
     }
 
-
+    @Deprecated
     public SocketEndPoint getScheduledEndPoint() throws IOException {
 //        Map.Entry<SocketEndPoint,CircularArrayList> min = null;
 
         Map.Entry<SocketEndPoint, Double> min = null;
-        for(Map.Entry<SocketEndPoint, Double> entry: latencyMap.entrySet()){
-            if(min == null){
+        for (Map.Entry<SocketEndPoint, Double> entry : latencyMap.entrySet()) {
+            if (min == null) {
                 min = entry;
                 continue;
             }
-            if(min.getValue() > entry.getValue()) {
+            if (min.getValue() > entry.getValue()) {
                 min = entry;
             }
         }
@@ -85,9 +85,10 @@ public class Scheduler {
 
     }
 
-    public void addToTable(SocketEndPoint key, double val){
+    @Deprecated
+    public void addToTable(SocketEndPoint key, double val) {
         latencyMap.put(key, val);
-        updateTable(key,val);
+        updateTable(key, val);
     }
 
 
@@ -109,18 +110,18 @@ public class Scheduler {
 
 
         CircularArrayList<Double> rttPoints;
-        if(rttMap.get(key) == null) {
+        if (rttMap.get(key) == null) {
             rttPoints = new CircularArrayList<Double>(windowSize);
             rttMap.put(key, rttPoints);
-        }
-        else {
+        } else {
             rttPoints = rttMap.get(key);
         }
         rttPoints.add(rttPoints.size(), val);
         rttMap.replace(key, rttPoints);
     }
 
-    private long calcLatency(long delay){
+    @Deprecated
+    private long calcLatency(long delay) {
         return delay;
     }
 

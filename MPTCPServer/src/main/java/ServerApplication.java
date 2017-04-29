@@ -27,6 +27,11 @@ public class ServerApplication implements Runnable {
         this.sock = sock;
     }
 
+    public synchronized static void print(String message) {
+
+        System.out.println(message);
+    }
+
     public static void main(String[] args) throws InterruptedException, IOException {
 
 
@@ -70,8 +75,7 @@ public class ServerApplication implements Runnable {
                 ex.printStackTrace();
                 //newThread.join();
                 break;
-            }
-            catch (Exception e){
+            } catch (Exception e) {
                 System.out.println("I was interrupted");
             }
 
@@ -108,10 +112,11 @@ public class ServerApplication implements Runnable {
 
                 }
                 int sleepVal = (int) interpolator.getY(packet.getId(), endPointName);
-                System.out.println("Sleeping for " + sleepVal);
+//                if (packet.getType() != PacketType.PING)
+                ServerApplication.print(String.format("%d %d %s %s", sleepVal, packet.getId(), endPointName, packet.getType().name()));
                 Thread.sleep(sleepVal);
                 packet.setLatency(sleepVal);
-                System.out.println("Sending " + packet.getId() + " of type " + packet.getType().name());
+//                System.out.println("Sending " + packet.getId() + " of type " + packet.getType().name());
                 fileTransfer.sendData(packet);
 
                 if (packet.getType() == PacketType.CLOSE_INDICATOR || packet.getId() >= raFile.length()) {
@@ -126,13 +131,12 @@ public class ServerApplication implements Runnable {
         } catch (EOFException ex) {
             System.out.println("EOF EXCEPTION");
             System.out.println(Thread.currentThread().getName());
-        }catch (Exception ex) {
+        } catch (Exception ex) {
             ex.printStackTrace();
-        }
-        finally {
+        } finally {
             System.out.println("Threads interrupted!");
             try {
-                if(fileTransfer != null){
+                if (fileTransfer != null) {
                     fileTransfer.close();
                 }
                 raFile.close();
@@ -159,8 +163,8 @@ public class ServerApplication implements Runnable {
     private synchronized NetworkPacket initializeTransfer(NetworkPacket packet) throws IOException {
         String fileName = new String(packet.getData());
 
-//        String path = filePath + "\\" + "MPTCPServer\\" + fileName;
-        String path = filePath + "\\" + fileName;
+        String path = filePath + "\\" + "MPTCPServer\\" + fileName;
+//        String path = filePath + "\\" + fileName;
         File file = new File(path);
         System.out.println(path);
         raFile = new RandomAccessFile(file, "r");

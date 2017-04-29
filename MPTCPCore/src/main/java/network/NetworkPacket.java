@@ -74,4 +74,9 @@ public class NetworkPacket implements Serializable {
     public void setEndPoint(String endPoint) {
         this.endPoint = endPoint;
     }
+
+    @Override
+    public String toString() {
+        return String.format("Id:%d\tType:%s\tEnd point:%s", getId(), getType().name(), getEndPoint());
+    }
 }
