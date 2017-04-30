@@ -168,8 +168,14 @@ public class ServerApplication implements Runnable {
         File file = new File(path);
         System.out.println(path);
         raFile = new RandomAccessFile(file, "r");
-        interpolator = new NetworkRTTInterpolator(raFile.length() + 1000);
-
+        if(packet.getEndPoint().equals("Wi-Fi")) {
+            double [] rand = {155.0, 235.6, 3600, 455.0, 400, 350, 2400.0, 800.0, 155, 165, 162};
+            interpolator = new NetworkRTTInterpolator(raFile.length() + 1000, rand);
+        }
+        else{
+            double [] rand = {80.0, 82.6, 81.0, 84.0, 81.4, 85.6, 80.6, 83.4, 85.1, 82.1, 84.2};
+            interpolator = new NetworkRTTInterpolator(raFile.length() + 1000, rand);
+        }
 //        FileInputStream fis = new FileInputStream(file);
 //        bis = new BufferedInputStream(fis);
         packetSize = packet.getLength();
