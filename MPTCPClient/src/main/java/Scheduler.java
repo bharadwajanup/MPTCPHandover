@@ -70,11 +70,12 @@ public class Scheduler {
         getSubFlow().update(y);
 //        getSubFlow().setExpectation(getSubFlow().dataManager.getMean());
         double change = getChangeInLatency(prevVal, getSubFlow().dataManager.getMean());
+        change = change > 0.2 || change < 0 ? change : 0;
 
         //Adjust Main Flow's expectations.
         if (!Double.isNaN(change)) {
 //            System.out.println(change);
-            double mainFLowExpectation = (1 + change) * getMainFlow().getExpectation();
+            double mainFLowExpectation = (1 + change) * getMainFlow().expectation;
             getMainFlow().setExpectation(mainFLowExpectation);
         }
 
