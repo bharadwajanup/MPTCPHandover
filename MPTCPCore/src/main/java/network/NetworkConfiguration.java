@@ -1,8 +1,6 @@
 package network;
 
-import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
@@ -13,7 +11,7 @@ public class NetworkConfiguration {
 
     private static String resourceFile = "config.properties";
 
-    public static String getProperty(String name) {
+    public static String getProperty(String name, String def) {
         ClassLoader loader = NetworkConfiguration.class.getClassLoader();
 //        URL resourceFileURL = loader.getResource(resourceFile);
         InputStream fs = loader.getResourceAsStream(resourceFile);
@@ -46,13 +44,12 @@ public class NetworkConfiguration {
 //            reader.close();
             return val;
 
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
+        } catch (Exception e) {
+            System.out.println("Exception while Reading properties file");
             e.printStackTrace();
         }
 
-        return null;
+        return def;
 
     }
 

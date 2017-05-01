@@ -62,7 +62,6 @@ public class PacketDownloader implements Runnable {
         } catch (NullPointerException n) {
             n.printStackTrace();
             System.out.println("Something was Null");
-
         }
     }
 }

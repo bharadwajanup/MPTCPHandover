@@ -13,7 +13,7 @@ import java.util.concurrent.*;
  */
 public class ClientApplication {
 
-    private static String storePath = System.getProperty("user.dir");
+    private static String storePath;
 
     @Deprecated
     public static double calcRTT(SocketEndPoint endPoint, long sample_rtt) {
@@ -60,9 +60,9 @@ public class ClientApplication {
     public static void main(String[] args) throws InterruptedException, IOException, ExecutionException {
         long startTime, endTime;
         int perPacketSize = 100;
-        String fileName = NetworkConfiguration.getProperty("file");
+        String fileName = NetworkConfiguration.getProperty("file", "sample.txt");
         long curAck;
-
+        storePath = NetworkConfiguration.getProperty("client_directory", System.getProperty("user.dir")) + NetworkConfiguration.getProperty("client_directory_name", "downloads");
         Future<Tuple<NetworkPacket, Double>> mainFlowResult;
         Future<Tuple<NetworkPacket, Double>> subFlowResult;
         Tuple<NetworkPacket, Double> result;
@@ -148,10 +148,5 @@ public class ClientApplication {
 
         if (!terminated)
             executor.shutdownNow();
-    }
-
-    private static void printRTTLog(SocketEndPoint sendingEndPoint, Double y) {
-        String message = String.format("%s\t%f", sendingEndPoint.getEndPointName(), y);
-        System.out.println(message);
     }
 }

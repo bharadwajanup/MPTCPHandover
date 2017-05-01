@@ -14,10 +14,6 @@ public class NetworkPacket implements Serializable {
     private double latency;
     private String endPoint;
 
-    public NetworkPacket() {
-
-    }
-
     public NetworkPacket(long id, PacketType type, int length, byte[] data, String endPoint) {
         this.id = id;
         this.type = type;

@@ -41,7 +41,6 @@ public class DataTransfer {
             return null;
 
         } catch (SocketTimeoutException s) {
-//            System.out.println("Timeout: "+getSocket().getSoTimeout());
             return null;
         }
     }

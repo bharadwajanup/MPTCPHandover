@@ -20,8 +20,8 @@ public class SocketEndPoint implements Callable<Tuple<NetworkPacket, Double>> {
 
     public SocketEndPoint(String name) throws IOException {
         setEndPointName(name);
-        String serverName = NetworkConfiguration.getProperty("host");
-        int port = Integer.parseInt(NetworkConfiguration.getProperty("port"));
+        String serverName = NetworkConfiguration.getProperty("host", "localhost");
+        int port = Integer.parseInt(NetworkConfiguration.getProperty("port", String.valueOf(12500)));
         this.socket = new Socket(serverName, port);
         this.dataTransfer = new DataTransfer(socket);
         this.connectionProperties = new ConnectionProperties();
@@ -43,14 +43,6 @@ public class SocketEndPoint implements Callable<Tuple<NetworkPacket, Double>> {
         socket.setSoTimeout(timeout);
     }
 
-//    @Deprecated
-//    public network.SocketEndPoint(Object schedulerCall, Scheduler scheduler, String storePath, String name) {
-//        this.schedulerCall = schedulerCall;
-//        this.scheduler = scheduler;
-//        this.storePath = storePath;
-//        this.name = name;
-//    }
-
     @Override
     public Tuple<NetworkPacket, Double> call() throws Exception {
         try {
@@ -58,9 +50,6 @@ public class SocketEndPoint implements Callable<Tuple<NetworkPacket, Double>> {
             NetworkPacket packet;
 
             dataTransfer.sendData(getNetworkPacket());
-//            System.out.println("Sending");
-//            System.out.println(getNetworkPacket());
-//            long start = System.currentTimeMillis();
             long startTime = System.currentTimeMillis(), endTime;
             do {
                 packet = dataTransfer.receiveData();
@@ -68,9 +57,6 @@ public class SocketEndPoint implements Callable<Tuple<NetworkPacket, Double>> {
                     break;
             }
             while (packet.getId() < getNetworkPacket().getId() || (getNetworkPacket().getType() == PacketType.PING && packet.getType() != PacketType.PING));
-
-//            System.out.println("Took "+(System.currentTimeMillis() - start)+" to get the packet for");
-//            System.out.println(packet);
 
             endTime = System.currentTimeMillis();
 

@@ -3,7 +3,6 @@ import network.SocketEndPoint;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
 import java.io.IOException;
-import java.util.HashMap;
 
 import static java.lang.Double.NaN;
 
@@ -13,15 +12,12 @@ import static java.lang.Double.NaN;
 public class Scheduler {
     public int windowSize;
     private boolean isMainFlow;
-    private DescriptiveStatistics dataManager;
-    private HashMap<SocketEndPoint, Flow> flowTable;
     private Flow mainFlow;
     private Flow subFlow; //Could Extend to multiple subflows.
     private double magicValue;
 
     public Scheduler(int windowSize) {
         this.windowSize = windowSize;
-        dataManager = new DescriptiveStatistics(windowSize);
         magicValue = 0.2;
         setFlow(true);
 
@@ -46,16 +42,6 @@ public class Scheduler {
     private double getChangeInLatency(double mean, double curVal) {
         return (curVal - mean) / mean;
     }
-
-//    public void update(double val) {
-//        double curMean = dataManager.getMean();
-//
-//        dataManager.addValue(val);
-//
-//        double changeInVal = getChangeInLatency(curMean, val);
-//
-//        setFlow(changeInVal < magicValue);
-//    }
 
     public boolean isMainFlow() {
         return isMainFlow;

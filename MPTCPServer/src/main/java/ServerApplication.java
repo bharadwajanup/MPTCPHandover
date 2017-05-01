@@ -21,7 +21,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * Created as part of the class project for Mobile Computing
  */
 public class ServerApplication implements Runnable {
-    public static String filePath = System.getProperty("user.dir");
+    public static String filePath;
     Socket sock;
     NetworkRTTInterpolator interpolator = null;
     private RandomAccessFile raFile;
@@ -40,8 +40,10 @@ public class ServerApplication implements Runnable {
 
 
         ServerSocket serverSocket = null;
+        filePath = NetworkConfiguration.getProperty("server_directory", System.getProperty("user.dir")) + NetworkConfiguration.getProperty("server_directory_name", "data");
+
         try {
-            serverSocket = new ServerSocket(Integer.parseInt(NetworkConfiguration.getProperty("port")));
+            serverSocket = new ServerSocket(Integer.parseInt(NetworkConfiguration.getProperty("port", String.valueOf(12500))));
             serverSocket.setReuseAddress(true);
         } catch (IOException e) {
             e.printStackTrace();
@@ -166,8 +168,7 @@ public class ServerApplication implements Runnable {
 
         String fileName = new String(packet.getData());
 
-        String path = filePath + "\\" + "MPTCPServer\\" + fileName;
-//        String path = filePath + "\\" + fileName;
+        String path = filePath + "/" + fileName;
         File file = new File(path);
         System.out.println(path);
         raFile = new RandomAccessFile(file, "r");
