@@ -62,7 +62,7 @@ public class ClientApplication {
         int perPacketSize = 100;
         String fileName = NetworkConfiguration.getProperty("file", "sample.txt");
         long curAck;
-        storePath = NetworkConfiguration.getProperty("client_directory", System.getProperty("user.dir")) + NetworkConfiguration.getProperty("client_directory_name", "downloads");
+        storePath = NetworkConfiguration.getProperty("client_directory", System.getProperty("user.dir")) + System.getProperty("file.separator") + NetworkConfiguration.getProperty("client_directory_name", "downloads");
         Future<Tuple<NetworkPacket, Double>> mainFlowResult;
         Future<Tuple<NetworkPacket, Double>> subFlowResult;
         Tuple<NetworkPacket, Double> result;
