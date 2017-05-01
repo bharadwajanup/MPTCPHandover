@@ -10,8 +10,12 @@ import java.io.RandomAccessFile;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Arrays;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Created as part of the class project for Mobile Computing
@@ -44,39 +48,19 @@ public class ServerApplication implements Runnable {
         }
 
         System.out.println("Server Started...");
-        Thread newThread = null;
-        int counter = 1;
         while (true) {
             try {
                 System.out.println("Accepting Connections");
                 Socket socket = serverSocket.accept();
                 System.out.println("Connection Established " + socket);
                 ExecutorService executor = Executors.newFixedThreadPool(4);
-
-                //newThread = new ServerApplication(socket);
-                /*String name = "Thread-" + counter;
-
-                newThread.setName(name);
-                counter++;
-                System.out.println("Thread " + name + " created.");
-
-                newThread.start();
-                  */
-
                 executor.execute(new ServerApplication(socket));
-
-
-                /*if (newThread.isAlive())
-                    System.out.println("Thread is still alive!");
-                else
-                    System.out.println("Thread is dead!");
-                */
             } catch (IOException ex) {
                 ex.printStackTrace();
                 //newThread.join();
                 break;
             } catch (Exception e) {
-                System.out.println("I was interrupted");
+                System.out.println("I was interrupted...");
             }
 
         }
@@ -87,10 +71,24 @@ public class ServerApplication implements Runnable {
     @Override
     public void run() {
         DataTransfer fileTransfer = null;
+        ExecutorService executor = Executors.newFixedThreadPool(1);
+        ArrayBlockingQueue<NetworkPacket> queue = new ArrayBlockingQueue<NetworkPacket>(1024);
+        Lock lock = new ReentrantLock();
+
+        Condition clearCondition = lock.newCondition();
+
         try {
             fileTransfer = new DataTransfer(sock);
+            PacketSender sender = new PacketSender(queue, fileTransfer, lock, clearCondition);
+            executor.execute(sender);
+
             while (true) {
                 NetworkPacket packet = fileTransfer.receiveData();
+
+                lock.lock();
+                clearCondition.signal();
+                lock.unlock();
+
                 String endPointName = packet.getEndPoint();
 
                 switch (packet.getType()) {
@@ -98,7 +96,10 @@ public class ServerApplication implements Runnable {
                         packet = initializeTransfer(packet);
                         break;
                     case PING:
-                        packet = createDummyPacketOfType(packet.getId(), PacketType.PING);
+                        if (packet.getId() >= raFile.length())
+                            packet = createDummyPacketOfType(packet.getId(), PacketType.CLOSE_INDICATOR);
+                        else
+                            packet = createDummyPacketOfType(packet.getId(), PacketType.PING);
                         break;
                     case CLOSE_INDICATOR:
                         packet = createDummyPacketOfType(packet.getId(), PacketType.CLOSE_INDICATOR);
@@ -108,25 +109,26 @@ public class ServerApplication implements Runnable {
                             packet = createDummyPacketOfType(packet.getId(), PacketType.CLOSE_INDICATOR);
                         else
                             packet = createDataPacket(packet.getId());
-//                        Thread.sleep(random.nextInt(1000));
 
                 }
+
                 int sleepVal = (int) interpolator.getY(packet.getId(), endPointName);
-//                if (packet.getType() != PacketType.PING)
                 ServerApplication.print(String.format("%d %d %s %s", sleepVal, packet.getId(), endPointName, packet.getType().name()));
-                Thread.sleep(sleepVal);
+
+
+                packet.setEndPoint(endPointName);
                 packet.setLatency(sleepVal);
-//                System.out.println("Sending " + packet.getId() + " of type " + packet.getType().name());
-                fileTransfer.sendData(packet);
+
+                queue.add(packet);
 
                 if (packet.getType() == PacketType.CLOSE_INDICATOR || packet.getId() >= raFile.length()) {
+                    while (queue.size() > 0) ;
+                    Thread.sleep(1000);
                     break;
                 }
             }
 
             System.out.println(String.format("Requested file %s successfully sent", ""));
-//            bis.close();
-//            fileTransfer.close();
 
         } catch (EOFException ex) {
             System.out.println("EOF EXCEPTION");
@@ -152,7 +154,6 @@ public class ServerApplication implements Runnable {
         int readLength;
         raFile.seek(id - 1);
         readLength = raFile.read(fileByteArray);
-//        readLength = bis.read(fileByteArray, 0, packetSize);
         return new NetworkPacket(id, PacketType.DATA, readLength, Arrays.copyOf(fileByteArray, readLength), null);
     }
 
@@ -161,6 +162,8 @@ public class ServerApplication implements Runnable {
     }
 
     private synchronized NetworkPacket initializeTransfer(NetworkPacket packet) throws IOException {
+
+
         String fileName = new String(packet.getData());
 
         String path = filePath + "\\" + "MPTCPServer\\" + fileName;
@@ -168,20 +171,20 @@ public class ServerApplication implements Runnable {
         File file = new File(path);
         System.out.println(path);
         raFile = new RandomAccessFile(file, "r");
+
+
         if(packet.getEndPoint().equals("Wi-Fi")) {
-            double [] rand = {155.0, 235.6, 3600, 455.0, 400, 350, 2400.0, 800.0, 155, 165, 162};
+            double[] rand = {155.0, 165, 175, 185, 195, 205, 215, 225, 255, 285, 325, 375, 485, 675, 1055, 1580, 3500, 4680, 2472, 1300, 850, 565, 345, 335, 325, 315, 295, 275, 255, 235, 215, 195, 155, 150, 155, 150, 155};
+            interpolator = new NetworkRTTInterpolator(raFile.length() + 1000, rand);
+        } else {
+            double[] rand = {80, 82, 81, 86, 92, 83, 81, 84, 82, 80, 78, 81, 86, 85};
             interpolator = new NetworkRTTInterpolator(raFile.length() + 1000, rand);
         }
-        else{
-            double [] rand = {80.0, 82.6, 81.0, 84.0, 81.4, 85.6, 80.6, 83.4, 85.1, 82.1, 84.2};
-            interpolator = new NetworkRTTInterpolator(raFile.length() + 1000, rand);
-        }
-//        FileInputStream fis = new FileInputStream(file);
-//        bis = new BufferedInputStream(fis);
+
+
         packetSize = packet.getLength();
-//        fileByteArray = new byte[packetSize];
         NetworkPacket ackPacket = new NetworkPacket(1, PacketType.ACKNOWLEDGEMENT, 0, null, null);
-        System.out.println("Sending ACK for Initiliazer");
+        System.out.println("Sending ACK for Initializer");
         return ackPacket;
     }
 }

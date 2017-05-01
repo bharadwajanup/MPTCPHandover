@@ -22,11 +22,18 @@ public class DataTransfer {
         setInputStream(new ObjectInputStream(socket.getInputStream()));
     }
 
-    public void sendData(NetworkPacket packet) throws IOException {
-        getOutputStream().writeObject(packet);
+    public boolean sendData(NetworkPacket packet) throws IOException {
+        try {
+            getOutputStream().writeObject(packet);
+            return true;
+        } catch (Exception ex) {
+            System.out.println("Write Failed due to an error.");
+            return false;
+        }
+
     }
 
-    public NetworkPacket receiveData() throws IOException {
+    public NetworkPacket receiveData() throws Exception {
         try {
             return (NetworkPacket) getInputStream().readObject();
         } catch (ClassNotFoundException e) {
@@ -34,20 +41,17 @@ public class DataTransfer {
             return null;
 
         } catch (SocketTimeoutException s) {
-            System.out.println("Timeout");
-            return null;
-        } catch (Exception e) {
-            System.out.println("Exception during DataTransfer");
-            System.out.println(e.getMessage());
-            e.printStackTrace();
+//            System.out.println("Timeout: "+getSocket().getSoTimeout());
             return null;
         }
     }
 
     public void close() throws IOException {
-        getInputStream().close();
-        getOutputStream().close();
-        getSocket().close();
+        if (!getSocket().isClosed()) {
+//            getInputStream().close();
+//            getOutputStream().close();
+            getSocket().close();
+        }
     }
 
     public Socket getSocket() {

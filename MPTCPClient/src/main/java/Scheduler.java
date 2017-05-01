@@ -1,94 +1,45 @@
+import network.PacketType;
 import network.SocketEndPoint;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.Map;
+
+import static java.lang.Double.NaN;
 
 /**
  * Created as part of the class project for Mobile Computing
  */
 public class Scheduler {
+    public int windowSize;
     private boolean isMainFlow;
     private DescriptiveStatistics dataManager;
-    private String owner;
-    private long offset;
-    private boolean transferFinished = false;
-    private int windowSize = 40;
-    private HashMap<SocketEndPoint, Double> latencyMap;
-    private HashMap<SocketEndPoint, CircularArrayList<Double>> rttMap;
-    private double Wifi;
-    private double Lte;
+    private HashMap<SocketEndPoint, Flow> flowTable;
+    private Flow mainFlow;
+    private Flow subFlow; //Could Extend to multiple subflows.
     private double magicValue;
 
     public Scheduler(int windowSize) {
-        latencyMap = new HashMap<SocketEndPoint, Double>();
-        rttMap = new HashMap<SocketEndPoint, CircularArrayList<Double>>();
+        this.windowSize = windowSize;
         dataManager = new DescriptiveStatistics(windowSize);
         magicValue = 0.2;
-        setMainFlow(true);
+        setFlow(true);
 
     }
 
-    public long getTimeout() {
-        return (long) ((long) dataManager.getMean() * (1 + magicValue));
+    public Flow getMainFlow() {
+        return mainFlow;
     }
 
-    @Deprecated
-    public SocketEndPoint getScheduledEndPoint() throws IOException {
-//        Map.Entry<SocketEndPoint,CircularArrayList> min = null;
-
-        Map.Entry<SocketEndPoint, Double> min = null;
-        for (Map.Entry<SocketEndPoint, Double> entry : latencyMap.entrySet()) {
-            if (min == null) {
-                min = entry;
-                continue;
-            }
-            if (min.getValue() > entry.getValue()) {
-                min = entry;
-            }
-        }
-        return min.getKey();
-
-//        double minVal = Double.MAX_VALUE;
-//        SocketEndPoint min = null;
-//        double wifiAvg = 0;
-//        double lteAvg = 0;
-//        for(Map.Entry<SocketEndPoint, CircularArrayList<Double>> rtt: rttMap.entrySet()){
-//            CircularArrayList<Double> arr = rtt.getValue();
-//            if(rtt.getKey().getEndPointName().equals("Wi-Fi")) {
-//                int i;
-//                for (i = 0; i < arr.size(); i ++) {
-//                    wifiAvg += arr.get(i);
-//                }
-//                Wifi = wifiAvg/arr.size();
-//                if (Wifi < minVal) {
-//                    minVal = Wifi;
-//                    min = rtt.getKey();
-//                }
-//            }
-//            else{
-//                int i;
-//                for (i = 0; i < arr.size(); i ++) {
-//                    lteAvg += arr.get(i);
-//                }
-//                Lte = lteAvg/arr.size();
-//                if(Lte < minVal){
-//                    minVal = Lte;
-//                    min = rtt.getKey();
-//                }
-//            }
-//
-//        }
-//        //String min = (Wifi < Lte)? "Wi-Fi" : "LTE";
-//        return min;
-
+    public void setFlow(SocketEndPoint endPoint, double expectation, boolean main) {
+        if (main)
+            this.mainFlow = new Flow(endPoint, expectation);
+        else
+            this.subFlow = new Flow(endPoint, expectation);
     }
 
-    @Deprecated
-    public void addToTable(SocketEndPoint key, double val) {
-        latencyMap.put(key, val);
-        updateTable(key, val);
+    public Flow getSubFlow() {
+        return subFlow;
     }
 
 
@@ -96,65 +47,96 @@ public class Scheduler {
         return (curVal - mean) / mean;
     }
 
-    public void update(double val) {
-        double curMean = dataManager.getMean();
-
-        dataManager.addValue(val);
-
-        double changeInVal = getChangeInLatency(curMean, val);
-
-        setMainFlow(changeInVal < magicValue);
-    }
-
-    public void updateTable(SocketEndPoint key, double val) {
-
-
-        CircularArrayList<Double> rttPoints;
-        if (rttMap.get(key) == null) {
-            rttPoints = new CircularArrayList<Double>(windowSize);
-            rttMap.put(key, rttPoints);
-        } else {
-            rttPoints = rttMap.get(key);
-        }
-        rttPoints.add(rttPoints.size(), val);
-        rttMap.replace(key, rttPoints);
-    }
-
-    @Deprecated
-    private long calcLatency(long delay) {
-        return delay;
-    }
-
-    public String getOwner() {
-        return owner;
-    }
-
-    public void setOwner(String owner) {
-        this.owner = owner;
-    }
-
-    public long getOffset() {
-        return offset;
-    }
-
-    public void setOffset(long offset) {
-        this.offset = offset;
-    }
-
-    public boolean isTransferFinished() {
-        return transferFinished;
-    }
-
-    public void setTransferFinished(boolean transferFinished) {
-        this.transferFinished = transferFinished;
-    }
-
+//    public void update(double val) {
+//        double curMean = dataManager.getMean();
+//
+//        dataManager.addValue(val);
+//
+//        double changeInVal = getChangeInLatency(curMean, val);
+//
+//        setFlow(changeInVal < magicValue);
+//    }
 
     public boolean isMainFlow() {
         return isMainFlow;
     }
 
-    public void setMainFlow(boolean mainFlow) {
+    public void setFlow(boolean mainFlow) {
         isMainFlow = mainFlow;
+    }
+
+    public PacketType getPacketType(boolean main) {
+        if (main) {
+            return isMainFlow() ? PacketType.ACKNOWLEDGEMENT : PacketType.PING;
+        }
+        return isMainFlow() ? PacketType.PING : PacketType.ACKNOWLEDGEMENT;
+    }
+
+    public void updateMainFlow(Double y) {
+        getMainFlow().update(y);
+        setFlow(getChangeInLatency(getMainFlow().expectation, y) < magicValue);
+        getMainFlow().setExpectation(Math.min(getMainFlow().getExpectation(), getMainFlow().dataManager.getMean()));
+
+    }
+
+    public void updateSubFlow(Double y) {
+        double prevVal = getSubFlow().dataManager.getMean();
+        getSubFlow().update(y);
+//        getSubFlow().setExpectation(getSubFlow().dataManager.getMean());
+        double change = getChangeInLatency(prevVal, getSubFlow().dataManager.getMean());
+
+        //Adjust Main Flow's expectations.
+        if (!Double.isNaN(change)) {
+//            System.out.println(change);
+            double mainFLowExpectation = (1 + change) * getMainFlow().getExpectation();
+            getMainFlow().setExpectation(mainFLowExpectation);
+        }
+
+        //If Sub-flow's speed is worse than main flow, switch back.
+        if (getSubFlow().dataManager.getMean() >= getMainFlow().dataManager.getMean())
+            setFlow(true);
+    }
+
+    public void closeFlows() throws IOException {
+        getMainFlow().getEndPoint().close();
+        getSubFlow().getEndPoint().close();
+    }
+
+    public class Flow {
+        DescriptiveStatistics dataManager;
+        private SocketEndPoint endPoint;
+        private double expectation;
+
+        Flow(SocketEndPoint endPoint, double expectation) {
+            this.setEndPoint(endPoint);
+            this.setExpectation(expectation);
+            dataManager = new DescriptiveStatistics(windowSize);
+        }
+
+        public SocketEndPoint getEndPoint() {
+            return endPoint;
+        }
+
+        public void setEndPoint(SocketEndPoint endPoint) {
+            this.endPoint = endPoint;
+        }
+
+        public double getExpectation() {
+            return expectation * (1 + magicValue);
+        }
+
+        public void setExpectation(double expectation) {
+            if (expectation == NaN) {
+                System.out.println("Invalid expectation");
+                return;
+            }
+
+            this.expectation = expectation;
+        }
+
+        public void update(Double val) {
+            dataManager.addValue(val);
+            expectation = Math.min(dataManager.getMean(), expectation);
+        }
     }
 }
