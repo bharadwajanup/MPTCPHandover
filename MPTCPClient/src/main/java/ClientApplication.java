@@ -98,7 +98,6 @@ public class ClientApplication {
 
         startTime = System.currentTimeMillis();
 
-        int i = 0, j = 0;
         while (true) {
 
 //            System.out.println("MainFlow: "+scheduler.getMainFlow().getEndPoint().getEndPointName());
@@ -107,10 +106,12 @@ public class ClientApplication {
             subFlowResult = getResult(curAck, scheduler.getSubFlow(), scheduler.getPacketType(false), executor);
 
             result = mainFlowResult.get();
-            scheduler.updateMainFlow(result.y);
+            if (result != null) {
+                scheduler.updateMainFlow(result.y);
 
-            if (result.x == null || result.x.getType() != PacketType.PING)
-                packet = result.x;
+                if (result.x == null || result.x.getType() != PacketType.PING)
+                    packet = result.x;
+            }
 
             result = subFlowResult.get();
             if (result != null) {
@@ -120,6 +121,10 @@ public class ClientApplication {
                     packet = result.x;
             }
 
+            if (result == null) {
+                System.out.println("Connection seems to be closed.");
+                break;
+            }
 
             if (packet == null) {
                 scheduler.setFlow(false);
@@ -137,8 +142,6 @@ public class ClientApplication {
                 startTime = System.currentTimeMillis();
             }
         }
-        System.out.println("Wifi: " + i);
-        System.out.println("Lte: " + j);
         System.out.println("File Downloaded...");
 
         scheduler.closeFlows();
