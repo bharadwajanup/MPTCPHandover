@@ -40,7 +40,7 @@ public class ServerApplication implements Runnable {
 
 
         ServerSocket serverSocket = null;
-        filePath = NetworkConfiguration.getProperty("server_directory", System.getProperty("user.dir")) + NetworkConfiguration.getProperty("server_directory_name", "data");
+        filePath = NetworkConfiguration.getProperty("server_directory", System.getProperty("user.dir")) + System.getProperty("file.separator") + NetworkConfiguration.getProperty("server_directory_name", "data");
 
         try {
             serverSocket = new ServerSocket(Integer.parseInt(NetworkConfiguration.getProperty("port", String.valueOf(12500))));
@@ -63,6 +63,8 @@ public class ServerApplication implements Runnable {
                 break;
             } catch (Exception e) {
                 System.out.println("I was interrupted...");
+                e.printStackTrace();
+                break;
             }
 
         }

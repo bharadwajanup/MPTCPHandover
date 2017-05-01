@@ -41,6 +41,8 @@ public class NetworkConfiguration {
             networkProperties.load(fs);
 //            networkProperties.load(reader);
             String val = networkProperties.getProperty(name);
+            if (val == null)
+                return def;
 //            reader.close();
             return val;
 
