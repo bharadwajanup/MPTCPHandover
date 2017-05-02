@@ -26,3 +26,5 @@ The project uses gradle for build automation and downloading dependencies. If yo
 * To run the server, run command: `gradlew run`
 * Open a new terminal/command prompt, navigate to the current directory and run: `gradlew client`
 
+DEMO: https://youtu.be/jpjTw0hWsJk
+
