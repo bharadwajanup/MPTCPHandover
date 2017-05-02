@@ -1,5 +1,5 @@
 # Handling "blindspots" in mobile internet connectivity - A multipath approach
-IU Bloomington Class Project of - Mobile Computing
+**Course: SP17-BL-CSCI-B649-15042 - Mobile Computing**
 
 ## Running the program:
 The project uses gradle for build automation and downloading dependencies. If you're facing issues related to gradle, please refer to: https://gradle.org/docs 
